@@ -3,6 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { ChatModel } from "@/lib/ai/models";
 
 /** Provider display names for grouping headings. */
@@ -107,55 +114,97 @@ export function ModelManagement({ models }: { models: ChatModel[] }) {
     );
   }
 
+  const [openProviders, setOpenProviders] = useState<Set<string>>(new Set());
+
+  const toggleProvider = (provider: string) => {
+    setOpenProviders((prev) => {
+      const next = new Set(prev);
+      if (next.has(provider)) next.delete(provider);
+      else next.add(provider);
+      return next;
+    });
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       {noneEnabled && (
-        <p className="text-muted-foreground text-sm">
+        <p className="mb-2 text-muted-foreground text-sm">
           No models explicitly enabled — all models are currently visible to
           users. Toggle individual models to restrict the selection.
         </p>
       )}
 
-      {Object.entries(grouped).map(([provider, models]) => (
-        <div key={provider}>
-          <h3 className="mb-2 font-medium text-sm text-muted-foreground">
-            {providerNames[provider] ?? provider}
-          </h3>
-          <div className="space-y-1">
-            {models.map((model) => {
-              const isEnabled = noneEnabled || enabledIds.has(model.id);
-              const isToggling = togglingIds.has(model.id);
+      {Object.entries(grouped).map(([provider, providerModels]) => {
+        const enabledCount = providerModels.filter((m) =>
+          noneEnabled ? true : enabledIds.has(m.id)
+        ).length;
+        const totalCount = providerModels.length;
 
-              return (
-                <div
-                  key={model.id}
-                  className="flex items-center justify-between rounded-md border px-3 py-2"
-                >
-                  <div>
-                    <p className="font-medium text-sm">{model.name}</p>
-                    <p className="text-muted-foreground text-xs">
-                      {model.description}
-                    </p>
-                  </div>
-                  <Button
-                    disabled={isToggling}
-                    onClick={() =>
-                      handleToggle(
-                        model.id,
-                        noneEnabled ? false : enabledIds.has(model.id)
-                      )
-                    }
-                    size="sm"
-                    variant={isEnabled && !noneEnabled ? "default" : "outline"}
-                  >
-                    {isEnabled && !noneEnabled ? "Enabled" : "Disabled"}
-                  </Button>
+        return (
+          <Collapsible
+            key={provider}
+            open={openProviders.has(provider)}
+            onOpenChange={() => toggleProvider(provider)}
+          >
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm font-medium hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <ChevronRight
+                    className={cn(
+                      "size-4 transition-transform duration-200",
+                      openProviders.has(provider) && "rotate-90"
+                    )}
+                  />
+                  <span>{providerNames[provider] ?? provider}</span>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
+                <span className="text-xs text-muted-foreground">
+                  {enabledCount}/{totalCount} enabled
+                </span>
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="space-y-1 pl-6 pt-1 pb-2">
+                {providerModels.map((model) => {
+                  const isEnabled = noneEnabled || enabledIds.has(model.id);
+                  const isToggling = togglingIds.has(model.id);
+
+                  return (
+                    <div
+                      key={model.id}
+                      className="flex items-center justify-between rounded-md border px-3 py-2"
+                    >
+                      <div>
+                        <p className="font-medium text-sm">{model.name}</p>
+                        <p className="text-muted-foreground text-xs">
+                          {model.description}
+                        </p>
+                      </div>
+                      <Button
+                        disabled={isToggling}
+                        onClick={() =>
+                          handleToggle(
+                            model.id,
+                            noneEnabled ? false : enabledIds.has(model.id)
+                          )
+                        }
+                        size="sm"
+                        variant={
+                          isEnabled && !noneEnabled ? "default" : "outline"
+                        }
+                      >
+                        {isEnabled && !noneEnabled ? "Enabled" : "Disabled"}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        );
+      })}
     </div>
   );
 }
