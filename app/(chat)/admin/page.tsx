@@ -2,7 +2,9 @@ import { auth } from "@/lib/supabase/auth";
 import { getAllUsers, getPendingInvitations } from "@/lib/db/queries";
 import { InvitationForm } from "@/components/admin/invitation-form";
 import { PendingInvitations } from "@/components/admin/pending-invitations";
+import { ModelManagement } from "@/components/admin/model-management";
 import { UserList } from "@/components/admin/user-list";
+import { getGatewayModels } from "@/lib/ai/gateway";
 import {
   Card,
   CardContent,
@@ -14,9 +16,10 @@ import {
 export default async function AdminPage() {
   // Auth is already checked in layout, but we need the session for the current user ID
   const session = (await auth())!;
-  const [users, invitations] = await Promise.all([
+  const [users, invitations, gatewayModels] = await Promise.all([
     getAllUsers(),
     getPendingInvitations(),
+    getGatewayModels(),
   ]);
 
   const serialisedInvitations = invitations.map((inv) => ({
@@ -67,6 +70,19 @@ export default async function AdminPage() {
             </h3>
             <PendingInvitations invitations={serialisedInvitations} />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Model management section */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="text-xl">Models</CardTitle>
+          <CardDescription>
+            Control which AI models are available to users. When no models are explicitly enabled, all models are visible.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ModelManagement models={gatewayModels} />
         </CardContent>
       </Card>
     </div>

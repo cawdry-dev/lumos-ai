@@ -48,7 +48,7 @@ export function Chat({
   initialVisibilityType: VisibilityType;
   isReadonly: boolean;
   autoResume: boolean;
-  visibleModels?: ChatModel[];
+  visibleModels: ChatModel[];
 }) {
   const router = useRouter();
 
@@ -249,6 +249,7 @@ export function Chat({
         setMessages={setMessages}
         status={status}
         stop={stop}
+        visibleModels={visibleModels}
         votes={votes}
       />
 

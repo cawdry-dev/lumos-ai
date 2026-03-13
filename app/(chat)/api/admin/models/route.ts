@@ -4,7 +4,7 @@ import {
   enableModel,
   disableModel,
 } from "@/lib/db/queries";
-import { allowedModelIds } from "@/lib/ai/models";
+import { getGatewayModels } from "@/lib/ai/gateway";
 
 /**
  * GET /api/admin/models
@@ -30,10 +30,13 @@ export async function GET() {
   }
 
   try {
-    const rows = await getEnabledModels();
+    const [models, rows] = await Promise.all([
+      getGatewayModels(),
+      getEnabledModels(),
+    ]);
     const enabledIds = rows.map((row) => row.id);
 
-    return Response.json({ enabledModelIds: enabledIds });
+    return Response.json({ models, enabledModelIds: enabledIds });
   } catch (error) {
     console.error("Failed to fetch enabled models:", error);
     return Response.json(
@@ -94,8 +97,10 @@ export async function PUT(request: Request) {
     );
   }
 
-  // Only allow toggling models that exist in our curated list
-  if (!allowedModelIds.has(modelId)) {
+  // Only allow toggling models that exist in the gateway list
+  const gatewayModels = await getGatewayModels();
+  const gatewayIds = new Set(gatewayModels.map((m) => m.id));
+  if (!gatewayIds.has(modelId)) {
     return Response.json(
       { error: "Unknown model ID." },
       { status: 400 }
