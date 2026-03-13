@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useActionState, useEffect, useState } from "react";
+import { Suspense, useActionState, useEffect, useState } from "react";
 import { AuthForm } from "@/components/auth-form";
 import { SubmitButton } from "@/components/submit-button";
 import { toast } from "@/components/toast";
@@ -13,6 +13,14 @@ import {
 } from "../actions";
 
 export default function Page() {
+  return (
+    <Suspense>
+      <RegisterPage />
+    </Suspense>
+  );
+}
+
+function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
