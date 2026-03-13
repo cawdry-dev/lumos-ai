@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
-import { guestRegex, isDevelopmentEnvironment } from "./lib/constants";
+import { updateSession } from "./lib/supabase/middleware";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -13,31 +12,48 @@ export async function proxy(request: NextRequest) {
     return new Response("pong", { status: 200 });
   }
 
-  if (pathname.startsWith("/api/auth")) {
-    return NextResponse.next();
+  // Refresh the Supabase auth session (token rotation, cookie sync)
+  const supabaseResponse = await updateSession(request);
+
+  // Allow auth callback routes to pass through without further checks
+  if (pathname.startsWith("/auth")) {
+    return supabaseResponse;
   }
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
-
-  if (!token) {
-    const redirectUrl = encodeURIComponent(request.url);
-
-    return NextResponse.redirect(
-      new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url)
+  // Check whether the user is authenticated by inspecting the refreshed cookies
+  const {
+    data: { user },
+  } = await (async () => {
+    const { createServerClient } = await import("@supabase/ssr");
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll() {},
+        },
+      }
     );
+    return supabase.auth.getUser();
+  })();
+
+  if (!user) {
+    // Unauthenticated users are redirected to the login page
+    if (!["/login", "/register"].includes(pathname)) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    return supabaseResponse;
   }
 
-  const isGuest = guestRegex.test(token?.email ?? "");
-
-  if (token && !isGuest && ["/login", "/register"].includes(pathname)) {
+  // Authenticated users should not see login/register pages
+  if (["/login", "/register"].includes(pathname)) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  return NextResponse.next();
+  return supabaseResponse;
 }
 
 export const config = {
