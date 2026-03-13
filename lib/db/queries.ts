@@ -9,6 +9,7 @@ import {
   gt,
   gte,
   inArray,
+  isNull,
   lt,
   type SQL,
 } from "drizzle-orm";
@@ -23,6 +24,7 @@ import {
   chat,
   type DBMessage,
   document,
+  invitation,
   message,
   type Suggestion,
   stream,
@@ -554,6 +556,112 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
     throw new ChatbotError(
       "bad_request:database",
       "Failed to get stream ids by chat id"
+    );
+  }
+}
+
+
+/** Returns the total number of users in the User table. */
+export async function getUserCount(): Promise<number> {
+  try {
+    const [result] = await db
+      .select({ count: count(user.id) })
+      .from(user)
+      .execute();
+
+    return result?.count ?? 0;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get user count"
+    );
+  }
+}
+
+/** Creates a user profile row in the User table. */
+export async function createProfile({
+  id,
+  email,
+  role,
+  invitedBy,
+}: {
+  id: string;
+  email: string;
+  role: string;
+  invitedBy?: string | null;
+}) {
+  try {
+    return await db.insert(user).values({
+      id,
+      email,
+      role,
+      invitedBy: invitedBy ?? undefined,
+      invitedAt: invitedBy ? new Date() : undefined,
+    });
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to create user profile"
+    );
+  }
+}
+
+/** Retrieves a user profile by ID, including role and display name. */
+export async function getProfileById(
+  id: string
+): Promise<User | null> {
+  try {
+    const [profile] = await db
+      .select()
+      .from(user)
+      .where(eq(user.id, id));
+
+    return profile ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get profile by id"
+    );
+  }
+}
+
+/**
+ * Retrieves a valid invitation by token.
+ * Returns null if the token is expired or already accepted.
+ */
+export async function getInvitationByToken(token: string) {
+  try {
+    const [inv] = await db
+      .select()
+      .from(invitation)
+      .where(
+        and(
+          eq(invitation.token, token),
+          isNull(invitation.acceptedAt),
+          gt(invitation.expiresAt, new Date())
+        )
+      );
+
+    return inv ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get invitation by token"
+    );
+  }
+}
+
+/** Marks an invitation as accepted by setting acceptedAt to now. */
+export async function markInvitationAccepted(token: string) {
+  try {
+    return await db
+      .update(invitation)
+      .set({ acceptedAt: new Date() })
+      .where(eq(invitation.token, token));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to mark invitation as accepted"
     );
   }
 }

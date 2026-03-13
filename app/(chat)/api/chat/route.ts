@@ -81,7 +81,7 @@ export async function POST(request: Request) {
 
     await checkIpRateLimit(ipAddress(request));
 
-    const userType: UserType = "regular";
+    const userType: UserType = session.user.role as UserType;
 
     const messageCount = await getMessageCountByUserId({
       id: session.user.id,
