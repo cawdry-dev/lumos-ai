@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Ubuntu, Ubuntu_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { AccentColourProvider } from "@/components/accent-colour-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 
 import "./globals.css";
@@ -15,20 +16,22 @@ export const viewport = {
   maximumScale: 1, // Disable auto-zoom on mobile Safari
 };
 
-const geist = Geist({
+const ubuntu = Ubuntu({
   subsets: ["latin"],
+  weight: ["300", "400", "500", "700"],
   display: "swap",
-  variable: "--font-geist",
+  variable: "--font-sans",
 });
 
-const geistMono = Geist_Mono({
+const ubuntuMono = Ubuntu_Mono({
   subsets: ["latin"],
+  weight: ["400", "700"],
   display: "swap",
-  variable: "--font-geist-mono",
+  variable: "--font-mono",
 });
 
-const LIGHT_THEME_COLOR = "hsl(0 0% 100%)";
-const DARK_THEME_COLOR = "hsl(240deg 10% 3.92%)";
+const LIGHT_THEME_COLOR = "oklch(1 0 0)";
+const DARK_THEME_COLOR = "oklch(0.145 0 0)";
 const THEME_COLOR_SCRIPT = `\
 (function() {
   var html = document.documentElement;
@@ -54,7 +57,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      className={`${geist.variable} ${geistMono.variable}`}
+      className={`${ubuntu.variable} ${ubuntuMono.variable}`}
       // `next-themes` injects an extra classname to the body element to avoid
       // visual flicker before hydration. Hence the `suppressHydrationWarning`
       // prop is necessary to avoid the React hydration mismatch warning.
@@ -77,8 +80,10 @@ export default function RootLayout({
           disableTransitionOnChange
           enableSystem
         >
-          <Toaster position="top-center" />
-          {children}
+          <AccentColourProvider>
+            <Toaster position="top-center" />
+            {children}
+          </AccentColourProvider>
         </ThemeProvider>
       </body>
     </html>
