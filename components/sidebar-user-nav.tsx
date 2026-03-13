@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronUp } from "lucide-react";
+import { AccentColourPicker } from "@/components/accent-colour-picker";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -63,6 +64,14 @@ export function SidebarUserNav({ user }: { user: UserNav }) {
               }
             >
               {`Toggle ${resolvedTheme === "light" ? "dark" : "light"} mode`}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              asChild
+              onSelect={(e) => e.preventDefault()}
+              data-testid="user-nav-item-accent"
+            >
+              <AccentColourPicker />
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild data-testid="user-nav-item-auth">
