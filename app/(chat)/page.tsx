@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Chat } from "@/components/chat";
 import { DataStreamHandler } from "@/components/data-stream-handler";
 import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
+import { getVisibleModels } from "@/lib/ai/models.server";
 import { generateUUID } from "@/lib/utils";
 
 export default function Page() {
@@ -17,34 +18,21 @@ async function NewChatPage() {
   const cookieStore = await cookies();
   const modelIdFromCookie = cookieStore.get("chat-model");
   const id = generateUUID();
+  const visibleModels = await getVisibleModels();
 
-  if (!modelIdFromCookie) {
-    return (
-      <>
-        <Chat
-          autoResume={false}
-          id={id}
-          initialChatModel={DEFAULT_CHAT_MODEL}
-          initialMessages={[]}
-          initialVisibilityType="private"
-          isReadonly={false}
-          key={id}
-        />
-        <DataStreamHandler />
-      </>
-    );
-  }
+  const selectedModel = modelIdFromCookie?.value ?? DEFAULT_CHAT_MODEL;
 
   return (
     <>
       <Chat
         autoResume={false}
         id={id}
-        initialChatModel={modelIdFromCookie.value}
+        initialChatModel={selectedModel}
         initialMessages={[]}
         initialVisibilityType="private"
         isReadonly={false}
         key={id}
+        visibleModels={visibleModels}
       />
       <DataStreamHandler />
     </>

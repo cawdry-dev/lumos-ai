@@ -28,6 +28,7 @@ import {
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
 import {
+  type ChatModel,
   chatModels,
   DEFAULT_CHAT_MODEL,
   modelsByProvider,
@@ -68,6 +69,7 @@ function PureMultimodalInput({
   selectedVisibilityType,
   selectedModelId,
   onModelChange,
+  visibleModels,
 }: {
   chatId: string;
   input: string;
@@ -83,6 +85,7 @@ function PureMultimodalInput({
   selectedVisibilityType: VisibilityType;
   selectedModelId: string;
   onModelChange?: (modelId: string) => void;
+  visibleModels?: ChatModel[];
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
@@ -387,6 +390,7 @@ function PureMultimodalInput({
             <ModelSelectorCompact
               onModelChange={onModelChange}
               selectedModelId={selectedModelId}
+              visibleModels={visibleModels}
             />
           </PromptInputTools>
 
@@ -464,16 +468,33 @@ const AttachmentsButton = memo(PureAttachmentsButton);
 function PureModelSelectorCompact({
   selectedModelId,
   onModelChange,
+  visibleModels,
 }: {
   selectedModelId: string;
   onModelChange?: (modelId: string) => void;
+  visibleModels?: ChatModel[];
 }) {
   const [open, setOpen] = useState(false);
 
+  // Use visible models if provided, otherwise fall back to all models
+  const models = visibleModels ?? chatModels;
+  const grouped = visibleModels
+    ? visibleModels.reduce(
+        (acc, model) => {
+          if (!acc[model.provider]) {
+            acc[model.provider] = [];
+          }
+          acc[model.provider].push(model);
+          return acc;
+        },
+        {} as Record<string, ChatModel[]>
+      )
+    : modelsByProvider;
+
   const selectedModel =
-    chatModels.find((m) => m.id === selectedModelId) ??
-    chatModels.find((m) => m.id === DEFAULT_CHAT_MODEL) ??
-    chatModels[0];
+    models.find((m) => m.id === selectedModelId) ??
+    models.find((m) => m.id === DEFAULT_CHAT_MODEL) ??
+    models[0];
   const [provider] = selectedModel.id.split("/");
 
   // Provider display names
@@ -496,7 +517,7 @@ function PureModelSelectorCompact({
       <ModelSelectorContent>
         <ModelSelectorInput placeholder="Search models..." />
         <ModelSelectorList>
-          {Object.entries(modelsByProvider).map(
+          {Object.entries(grouped).map(
             ([providerKey, providerModels]) => (
               <ModelSelectorGroup
                 heading={providerNames[providerKey] ?? providerKey}

@@ -13,6 +13,7 @@ import { createResumableStreamContext } from "resumable-stream";
 import { auth, type UserType } from "@/lib/supabase/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { allowedModelIds } from "@/lib/ai/models";
+import { getVisibleModels } from "@/lib/ai/models.server";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
@@ -76,6 +77,13 @@ export async function POST(request: Request) {
     }
 
     if (!allowedModelIds.has(selectedChatModel)) {
+      return new ChatbotError("bad_request:api").toResponse();
+    }
+
+    // Check the selected model is enabled by an admin (if any models are enabled)
+    const visibleModels = await getVisibleModels();
+    const visibleModelIds = new Set(visibleModels.map((m) => m.id));
+    if (!visibleModelIds.has(selectedChatModel)) {
       return new ChatbotError("bad_request:api").toResponse();
     }
 
