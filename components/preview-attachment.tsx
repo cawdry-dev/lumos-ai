@@ -1,4 +1,3 @@
-import Image from "next/image";
 import type { Attachment } from "@/lib/types";
 import { resolveAttachmentUrl } from "@/lib/supabase/storage";
 import { Loader } from "./elements/loader";
@@ -23,7 +22,8 @@ export const PreviewAttachment = ({
       data-testid="input-attachment-preview"
     >
       {contentType?.startsWith("image") ? (
-        <Image
+        // biome-ignore lint/performance/noImgElement: dynamic user-uploaded images served via API redirect
+        <img
           alt={name ?? "An image attachment"}
           className="size-full object-cover"
           height={64}
