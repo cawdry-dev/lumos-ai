@@ -19,6 +19,12 @@ export type LoginActionState = {
   status: "idle" | "in_progress" | "success" | "failed" | "invalid_data";
 };
 
+/** Returns true if no users exist yet (first-user bootstrap). */
+export async function checkIsFirstUser(): Promise<boolean> {
+  const userCount = await getUserCount();
+  return userCount === 0;
+}
+
 export const login = async (
   _: LoginActionState,
   formData: FormData
