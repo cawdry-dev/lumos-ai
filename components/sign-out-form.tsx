@@ -1,6 +1,7 @@
 import Form from "next/form";
+import { redirect } from "next/navigation";
 
-import { signOut } from "@/app/(auth)/auth";
+import { createClient } from "@/lib/supabase/server";
 
 export const SignOutForm = () => {
   return (
@@ -8,9 +9,9 @@ export const SignOutForm = () => {
       action={async () => {
         "use server";
 
-        await signOut({
-          redirectTo: "/",
-        });
+        const supabase = await createClient();
+        await supabase.auth.signOut();
+        redirect("/login");
       }}
       className="w-full"
     >

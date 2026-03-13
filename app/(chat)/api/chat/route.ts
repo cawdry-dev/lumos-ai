@@ -10,7 +10,7 @@ import {
 import { checkBotId } from "botid/server";
 import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
-import { auth, type UserType } from "@/app/(auth)/auth";
+import { auth, type UserType } from "@/lib/supabase/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { allowedModelIds } from "@/lib/ai/models";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
 
     await checkIpRateLimit(ipAddress(request));
 
-    const userType: UserType = session.user.type;
+    const userType: UserType = "regular";
 
     const messageCount = await getMessageCountByUserId({
       id: session.user.id,

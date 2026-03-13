@@ -1,5 +1,6 @@
 import Image from "next/image";
 import type { Attachment } from "@/lib/types";
+import { resolveAttachmentUrl } from "@/lib/supabase/storage";
 import { Loader } from "./elements/loader";
 import { CrossSmallIcon } from "./icons";
 import { Button } from "./ui/button";
@@ -13,7 +14,8 @@ export const PreviewAttachment = ({
   isUploading?: boolean;
   onRemove?: () => void;
 }) => {
-  const { name, url, contentType } = attachment;
+  const { name, url: rawUrl, contentType } = attachment;
+  const url = resolveAttachmentUrl(rawUrl);
 
   return (
     <div
