@@ -2,8 +2,14 @@ import "server-only";
 
 import { Resend } from "resend";
 
-// biome-ignore lint: Forbidden non-null assertion.
-const resend = new Resend(process.env.RESEND_API_KEY!);
+/** Lazily initialised Resend client — avoids build-time errors when the env var is absent. */
+function getResendClient(): Resend {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY environment variable is not set.");
+  }
+  return new Resend(apiKey);
+}
 
 /**
  * Sends an invitation email to a prospective user via Resend.
@@ -32,7 +38,7 @@ export async function sendInvitationEmail({
     (expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
   );
 
-  const { data, error } = await resend.emails.send({
+  const { data, error } = await getResendClient().emails.send({
     from: process.env.RESEND_FROM_EMAIL ?? "Chatbot <noreply@example.com>",
     to,
     subject: "You've been invited to the Internal Chatbot",
