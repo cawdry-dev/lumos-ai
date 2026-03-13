@@ -5,7 +5,7 @@ import { createClient } from "./server";
 
 /**
  * Represents the authenticated user session returned by Supabase Auth.
- * Mirrors the shape previously provided by NextAuth for compatibility.
+ * Provides a minimal session shape for use throughout the application.
  */
 export type Session = {
   user: {

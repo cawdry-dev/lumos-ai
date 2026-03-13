@@ -14,6 +14,7 @@ import {
 export const user = pgTable("User", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   email: varchar("email", { length: 64 }).notNull(),
+  /** @deprecated Legacy column — passwords are now managed by Supabase Auth. Do NOT drop; existing data may reference it. */
   password: varchar("password", { length: 64 }),
 });
 
