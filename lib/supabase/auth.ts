@@ -27,25 +27,40 @@ export async function auth(): Promise<Session | null> {
   const supabase = await createClient();
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
 
+  if (authError) {
+    console.error("[auth] Supabase getUser error:", authError.message);
+  }
+
   if (!user) {
+    console.error("[auth] No user from supabase.auth.getUser()");
     return null;
   }
+
+  console.error("[auth] User found:", user.id, user.email);
 
   // Fetch the profile from the User table; if no profile exists the user is not fully registered
-  const profile = await getProfileById(user.id);
-  if (!profile) {
+  try {
+    const profile = await getProfileById(user.id);
+    if (!profile) {
+      console.error("[auth] No profile found for user:", user.id);
+      return null;
+    }
+    console.error("[auth] Profile found, role:", profile.role);
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email ?? "",
+        role: profile.role,
+        displayName: profile.displayName ?? null,
+      },
+    };
+  } catch (error) {
+    console.error("[auth] getProfileById threw:", error);
     return null;
   }
-
-  return {
-    user: {
-      id: user.id,
-      email: user.email ?? "",
-      role: profile.role,
-      displayName: profile.displayName ?? null,
-    },
-  };
 }
 
