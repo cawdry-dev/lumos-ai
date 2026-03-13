@@ -29,14 +29,13 @@ function groupByProvider(models: ChatModel[]): Record<string, ChatModel[]> {
 }
 
 export function ModelManagement({ models }: { models: ChatModel[] }) {
-  const [models, setModels] = useState<ChatModel[]>([]);
   const [enabledIds, setEnabledIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
 
-  // Fetch gateway models and current enabled state on mount
+  // Fetch current enabled models on mount
   useEffect(() => {
-    async function fetchModels() {
+    async function fetchEnabled() {
       try {
         const res = await fetch("/api/admin/models");
         if (!res.ok) {
@@ -44,7 +43,6 @@ export function ModelManagement({ models }: { models: ChatModel[] }) {
           return;
         }
         const data = await res.json();
-        setModels(data.models as ChatModel[]);
         setEnabledIds(new Set(data.enabledModelIds as string[]));
       } catch {
         toast({ type: "error", description: "Failed to load model settings." });
@@ -52,7 +50,7 @@ export function ModelManagement({ models }: { models: ChatModel[] }) {
         setLoading(false);
       }
     }
-    fetchModels();
+    fetchEnabled();
   }, []);
 
   const handleToggle = useCallback(
