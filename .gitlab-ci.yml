@@ -1,0 +1,82 @@
+image: node:20
+
+# Cache pnpm store for faster builds
+cache:
+  key:
+    files:
+      - pnpm-lock.yaml
+  paths:
+    - .pnpm-store
+
+# Define pipeline stages
+stages:
+  - install
+  - lint
+  - build
+  - test
+
+# Global before_script to set up pnpm
+before_script:
+  - corepack enable
+  - corepack prepare pnpm@9.12.3 --activate
+  - pnpm config set store-dir .pnpm-store
+  - pnpm install --frozen-lockfile
+
+# Install dependencies
+install:
+  stage: install
+  script:
+    - echo "Dependencies installed"
+  artifacts:
+    paths:
+      - node_modules/
+      - .pnpm-store/
+    expire_in: 1 hour
+
+# Run linter
+lint:
+  stage: lint
+  script:
+    - pnpm lint
+  needs:
+    - install
+
+# Build the application
+build:
+  stage: build
+  script:
+    - pnpm build
+  variables:
+    NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    POSTGRES_URL: ${POSTGRES_URL}
+    AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY}
+    REDIS_URL: ${REDIS_URL}
+  artifacts:
+    paths:
+      - .next/
+    expire_in: 1 hour
+  needs:
+    - install
+
+# Run Playwright tests
+test:
+  stage: test
+  script:
+    - npx playwright install --with-deps chromium
+    - pnpm test
+  variables:
+    NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    POSTGRES_URL: ${POSTGRES_URL}
+    AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY}
+    REDIS_URL: ${REDIS_URL}
+    PLAYWRIGHT: "True"
+  artifacts:
+    when: always
+    paths:
+      - playwright-report/
+      - test-results/
+    expire_in: 30 days
+  needs:
+    - install
