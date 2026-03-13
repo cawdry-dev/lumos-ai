@@ -9,6 +9,7 @@ import {
   gt,
   gte,
   inArray,
+  isNull,
   lt,
   type SQL,
 } from "drizzle-orm";
@@ -23,6 +24,8 @@ import {
   chat,
   type DBMessage,
   document,
+  enabledModel,
+  invitation,
   message,
   type Suggestion,
   stream,
@@ -554,6 +557,251 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
     throw new ChatbotError(
       "bad_request:database",
       "Failed to get stream ids by chat id"
+    );
+  }
+}
+
+
+/** Returns the total number of users in the User table. */
+export async function getUserCount(): Promise<number> {
+  try {
+    const [result] = await db
+      .select({ count: count(user.id) })
+      .from(user)
+      .execute();
+
+    return result?.count ?? 0;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get user count"
+    );
+  }
+}
+
+/** Creates a user profile row in the User table. */
+export async function createProfile({
+  id,
+  email,
+  role,
+  invitedBy,
+}: {
+  id: string;
+  email: string;
+  role: string;
+  invitedBy?: string | null;
+}) {
+  try {
+    return await db.insert(user).values({
+      id,
+      email,
+      role,
+      invitedBy: invitedBy ?? undefined,
+      invitedAt: invitedBy ? new Date() : undefined,
+    });
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to create user profile"
+    );
+  }
+}
+
+/** Retrieves a user profile by ID, including role and display name. */
+export async function getProfileById(
+  id: string
+): Promise<User | null> {
+  try {
+    const [profile] = await db
+      .select()
+      .from(user)
+      .where(eq(user.id, id));
+
+    return profile ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get profile by id"
+    );
+  }
+}
+
+/** Creates a new invitation record in the database. */
+export async function createInvitation({
+  email,
+  role,
+  invitedBy,
+  token,
+  expiresAt,
+}: {
+  email: string;
+  role: string;
+  invitedBy: string;
+  token: string;
+  expiresAt: Date;
+}) {
+  try {
+    const [created] = await db
+      .insert(invitation)
+      .values({
+        email,
+        role,
+        invitedBy,
+        token,
+        createdAt: new Date(),
+        expiresAt,
+      })
+      .returning();
+
+    return created;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to create invitation"
+    );
+  }
+}
+
+/**
+ * Retrieves a valid invitation by token.
+ * Returns null if the token is expired or already accepted.
+ */
+export async function getInvitationByToken(token: string) {
+  try {
+    const [inv] = await db
+      .select()
+      .from(invitation)
+      .where(
+        and(
+          eq(invitation.token, token),
+          isNull(invitation.acceptedAt),
+          gt(invitation.expiresAt, new Date())
+        )
+      );
+
+    return inv ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get invitation by token"
+    );
+  }
+}
+
+/** Returns all enabled model rows from the EnabledModel table. */
+export async function getEnabledModels() {
+  try {
+    return await db.select().from(enabledModel);
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get enabled models"
+    );
+  }
+}
+
+/** Enables a model by upserting into the EnabledModel table. */
+export async function enableModel(id: string, userId: string) {
+  try {
+    return await db
+      .insert(enabledModel)
+      .values({ id, enabledAt: new Date(), enabledBy: userId })
+      .onConflictDoNothing();
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to enable model"
+    );
+  }
+}
+
+/** Disables a model by removing it from the EnabledModel table. */
+export async function disableModel(id: string) {
+  try {
+    return await db
+      .delete(enabledModel)
+      .where(eq(enabledModel.id, id));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to disable model"
+    );
+  }
+}
+
+/** Marks an invitation as accepted by setting acceptedAt to now. */
+export async function markInvitationAccepted(token: string) {
+  try {
+    return await db
+      .update(invitation)
+      .set({ acceptedAt: new Date() })
+      .where(eq(invitation.token, token));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to mark invitation as accepted"
+    );
+  }
+}
+
+/** Returns all users ordered by email. */
+export async function getAllUsers(): Promise<User[]> {
+  try {
+    return await db.select().from(user).orderBy(asc(user.email));
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to get all users");
+  }
+}
+
+/** Updates a user's role. */
+export async function updateUserRole(id: string, role: string) {
+  try {
+    const [updated] = await db
+      .update(user)
+      .set({ role })
+      .where(eq(user.id, id))
+      .returning();
+
+    return updated;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to update user role"
+    );
+  }
+}
+
+/** Returns pending invitations (not accepted, not expired), ordered by createdAt desc. */
+export async function getPendingInvitations() {
+  try {
+    return await db
+      .select()
+      .from(invitation)
+      .where(
+        and(
+          isNull(invitation.acceptedAt),
+          gt(invitation.expiresAt, new Date())
+        )
+      )
+      .orderBy(desc(invitation.createdAt));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get pending invitations"
+    );
+  }
+}
+
+/** Deletes an invitation by ID. */
+export async function revokeInvitation(id: string) {
+  try {
+    return await db
+      .delete(invitation)
+      .where(eq(invitation.id, id));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to revoke invitation"
     );
   }
 }

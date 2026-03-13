@@ -6,6 +6,7 @@ import { auth } from "@/lib/supabase/auth";
 import { Chat } from "@/components/chat";
 import { DataStreamHandler } from "@/components/data-stream-handler";
 import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
+import { getVisibleModels } from "@/lib/ai/models.server";
 import { getChatById, getMessagesByChatId } from "@/lib/db/queries";
 import { convertToUIMessages } from "@/lib/utils";
 
@@ -49,32 +50,20 @@ async function ChatPage({ params }: { params: Promise<{ id: string }> }) {
 
   const cookieStore = await cookies();
   const chatModelFromCookie = cookieStore.get("chat-model");
+  const visibleModels = await getVisibleModels();
 
-  if (!chatModelFromCookie) {
-    return (
-      <>
-        <Chat
-          autoResume={true}
-          id={chat.id}
-          initialChatModel={DEFAULT_CHAT_MODEL}
-          initialMessages={uiMessages}
-          initialVisibilityType={chat.visibility}
-          isReadonly={session?.user?.id !== chat.userId}
-        />
-        <DataStreamHandler />
-      </>
-    );
-  }
+  const selectedModel = chatModelFromCookie?.value ?? DEFAULT_CHAT_MODEL;
 
   return (
     <>
       <Chat
         autoResume={true}
         id={chat.id}
-        initialChatModel={chatModelFromCookie.value}
+        initialChatModel={selectedModel}
         initialMessages={uiMessages}
         initialVisibilityType={chat.visibility}
         isReadonly={session?.user?.id !== chat.userId}
+        visibleModels={visibleModels}
       />
       <DataStreamHandler />
     </>

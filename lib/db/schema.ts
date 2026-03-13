@@ -16,7 +16,20 @@ export const user = pgTable("User", {
   email: varchar("email", { length: 64 }).notNull(),
   /** @deprecated Legacy column — passwords are now managed by Supabase Auth. Do NOT drop; existing data may reference it. */
   password: varchar("password", { length: 64 }),
-});
+  /** Role governing access level — 'admin' or 'editor'. */
+  role: varchar("role", { length: 20 }).notNull().default("editor"),
+  /** Optional display name shown in the UI. */
+  displayName: text("displayName"),
+  /** The user who invited this user, if applicable. */
+  invitedBy: uuid("invitedBy"),
+  /** Timestamp when the invitation was sent. */
+  invitedAt: timestamp("invitedAt"),
+}, (table) => ({
+  invitedByRef: foreignKey({
+    columns: [table.invitedBy],
+    foreignColumns: [table.id],
+  }),
+}));
 
 export type User = InferSelectModel<typeof user>;
 
@@ -133,3 +146,37 @@ export const stream = pgTable(
 );
 
 export type Stream = InferSelectModel<typeof stream>;
+
+/** Pending invitations sent to prospective users. */
+export const invitation = pgTable("Invitation", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  email: varchar("email", { length: 255 }).notNull(),
+  /** Role the invitee will receive upon acceptance. */
+  role: varchar("role", { length: 20 }).notNull().default("editor"),
+  /** Unique token used to accept the invitation. */
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  /** The admin who created this invitation. */
+  invitedBy: uuid("invitedBy")
+    .notNull()
+    .references(() => user.id),
+  createdAt: timestamp("createdAt").notNull(),
+  /** Timestamp when the invitation was accepted; null if still pending. */
+  acceptedAt: timestamp("acceptedAt"),
+  /** Expiry timestamp after which the invitation is no longer valid. */
+  expiresAt: timestamp("expiresAt").notNull(),
+});
+
+export type Invitation = InferSelectModel<typeof invitation>;
+
+/** AI models that have been enabled for use in the application. */
+export const enabledModel = pgTable("EnabledModel", {
+  /** The model identifier string, e.g. "openai/gpt-4.1-mini". */
+  id: varchar("id", { length: 255 }).primaryKey().notNull(),
+  enabledAt: timestamp("enabledAt").notNull(),
+  /** The admin who enabled this model. */
+  enabledBy: uuid("enabledBy")
+    .notNull()
+    .references(() => user.id),
+});
+
+export type EnabledModel = InferSelectModel<typeof enabledModel>;

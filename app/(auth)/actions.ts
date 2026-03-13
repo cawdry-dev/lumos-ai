@@ -2,6 +2,12 @@
 
 import { z } from "zod";
 
+import {
+  createProfile,
+  getInvitationByToken,
+  getUserCount,
+  markInvitationAccepted,
+} from "@/lib/db/queries";
 import { createClient } from "@/lib/supabase/server";
 
 const authFormSchema = z.object({
@@ -12,6 +18,12 @@ const authFormSchema = z.object({
 export type LoginActionState = {
   status: "idle" | "in_progress" | "success" | "failed" | "invalid_data";
 };
+
+/** Returns true if no users exist yet (first-user bootstrap). */
+export async function checkIsFirstUser(): Promise<boolean> {
+  const userCount = await getUserCount();
+  return userCount === 0;
+}
 
 export const login = async (
   _: LoginActionState,
@@ -50,7 +62,8 @@ export type RegisterActionState = {
     | "success"
     | "failed"
     | "user_exists"
-    | "invalid_data";
+    | "invalid_data"
+    | "invalid_token";
 };
 
 export const register = async (
@@ -63,8 +76,10 @@ export const register = async (
       password: formData.get("password"),
     });
 
+    const token = formData.get("token") as string | null;
+
     const supabase = await createClient();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: validatedData.email,
       password: validatedData.password,
     });
@@ -75,6 +90,40 @@ export const register = async (
         return { status: "user_exists" };
       }
       return { status: "failed" };
+    }
+
+    const userId = data.user?.id;
+    if (!userId) {
+      return { status: "failed" };
+    }
+
+    // First user becomes admin automatically; subsequent users require a valid invitation
+    const existingUserCount = await getUserCount();
+
+    if (existingUserCount === 0) {
+      await createProfile({
+        id: userId,
+        email: validatedData.email,
+        role: "admin",
+      });
+    } else {
+      if (!token) {
+        return { status: "invalid_token" };
+      }
+
+      const inv = await getInvitationByToken(token);
+      if (!inv) {
+        return { status: "invalid_token" };
+      }
+
+      await createProfile({
+        id: userId,
+        email: validatedData.email,
+        role: inv.role,
+        invitedBy: inv.invitedBy,
+      });
+
+      await markInvitationAccepted(token);
     }
 
     return { status: "success" };

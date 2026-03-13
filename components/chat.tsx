@@ -20,6 +20,7 @@ import {
 import { useArtifactSelector } from "@/hooks/use-artifact";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
+import type { ChatModel } from "@/lib/ai/models";
 import type { Vote } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
 import type { Attachment, ChatMessage } from "@/lib/types";
@@ -39,6 +40,7 @@ export function Chat({
   initialVisibilityType,
   isReadonly,
   autoResume,
+  visibleModels,
 }: {
   id: string;
   initialMessages: ChatMessage[];
@@ -46,6 +48,7 @@ export function Chat({
   initialVisibilityType: VisibilityType;
   isReadonly: boolean;
   autoResume: boolean;
+  visibleModels?: ChatModel[];
 }) {
   const router = useRouter();
 
@@ -224,6 +227,7 @@ export function Chat({
               setMessages={setMessages}
               status={status}
               stop={stop}
+              visibleModels={visibleModels}
             />
           )}
         </div>
