@@ -44,7 +44,14 @@ export async function proxy(request: NextRequest) {
   const publicPaths = ["/login", "/register", "/no-access"];
 
   if (!user) {
-    // Unauthenticated users are redirected to the login page
+    // API routes should return 401 instead of redirecting
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "Authentication required." },
+        { status: 401 }
+      );
+    }
+    // Unauthenticated page requests are redirected to the login page
     if (!publicPaths.includes(pathname)) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
@@ -76,6 +83,12 @@ export async function proxy(request: NextRequest) {
       .maybeSingle();
 
     if (!profile) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json(
+          { error: "No access. Profile not found." },
+          { status: 403 }
+        );
+      }
       return NextResponse.redirect(new URL("/no-access", request.url));
     }
   }
