@@ -1,26 +1,31 @@
 import "server-only";
 
 import { getEnabledModels } from "@/lib/db/queries";
-import { type ChatModel, chatModels } from "./models";
+import type { ChatModel } from "./models";
+import { getGatewayModels } from "./gateway";
 
 /**
  * Returns the list of models visible to users.
- * If any models have been explicitly enabled by an admin, only those are returned.
- * If no models are enabled (empty table), all models are returned as a safe default.
+ * Fetches the full model list from the AI Gateway, then filters
+ * to only admin-enabled models. If no models are explicitly enabled
+ * (empty table), all gateway models are returned as a safe default.
  */
 export async function getVisibleModels(): Promise<ChatModel[]> {
-  const enabledRows = await getEnabledModels();
+  const [allModels, enabledRows] = await Promise.all([
+    getGatewayModels(),
+    getEnabledModels(),
+  ]);
 
   if (enabledRows.length === 0) {
-    return chatModels;
+    return allModels;
   }
 
   const enabledIds = new Set(enabledRows.map((row) => row.id));
-  return chatModels.filter((model) => enabledIds.has(model.id));
+  return allModels.filter((model) => enabledIds.has(model.id));
 }
 
 /**
- * Returns visible models grouped by provider, mirroring the shape of `modelsByProvider`.
+ * Returns visible models grouped by provider.
  */
 export async function getVisibleModelsByProvider(): Promise<
   Record<string, ChatModel[]>
