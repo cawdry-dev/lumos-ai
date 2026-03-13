@@ -2,6 +2,7 @@ import { auth } from "@/lib/supabase/auth";
 import { getAllUsers, getPendingInvitations } from "@/lib/db/queries";
 import { InvitationForm } from "@/components/admin/invitation-form";
 import { PendingInvitations } from "@/components/admin/pending-invitations";
+import { ModelManagement } from "@/components/admin/model-management";
 import { UserList } from "@/components/admin/user-list";
 import {
   Card,
@@ -67,6 +68,19 @@ export default async function AdminPage() {
             </h3>
             <PendingInvitations invitations={serialisedInvitations} />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Model management section */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="text-xl">Models</CardTitle>
+          <CardDescription>
+            Control which AI models are available to users. When no models are explicitly enabled, all models are visible.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ModelManagement />
         </CardContent>
       </Card>
     </div>
