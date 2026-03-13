@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
-import { type ChatModel, chatModels } from "@/lib/ai/models";
+import type { ChatModel } from "@/lib/ai/models";
 
 /** Provider display names for grouping headings. */
 const providerNames: Record<string, string> = {
@@ -28,7 +28,7 @@ function groupByProvider(models: ChatModel[]): Record<string, ChatModel[]> {
   );
 }
 
-export function ModelManagement() {
+export function ModelManagement({ models }: { models: ChatModel[] }) {
   const [enabledIds, setEnabledIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
@@ -95,7 +95,7 @@ export function ModelManagement() {
     []
   );
 
-  const grouped = groupByProvider(chatModels);
+  const grouped = groupByProvider(models);
   // When no models are explicitly enabled, all are considered visible
   const noneEnabled = enabledIds.size === 0;
 

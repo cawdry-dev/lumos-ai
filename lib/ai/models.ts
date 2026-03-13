@@ -1,4 +1,3 @@
-// Curated list of top models from Vercel AI Gateway
 export const DEFAULT_CHAT_MODEL = "openai/gpt-4.1-mini";
 
 export type ChatModel = {
@@ -8,7 +7,11 @@ export type ChatModel = {
   description: string;
 };
 
-export const chatModels: ChatModel[] = [
+/**
+ * Fallback models used when the AI Gateway is unreachable.
+ * At runtime, models are fetched dynamically from the gateway.
+ */
+export const FALLBACK_MODELS: ChatModel[] = [
   // Anthropic
   {
     id: "anthropic/claude-haiku-4.5",
@@ -60,20 +63,6 @@ export const chatModels: ChatModel[] = [
     id: "xai/grok-code-fast-1-thinking",
     name: "Grok Code Fast",
     provider: "reasoning",
-    description: "Reasoning optimized for code",
+    description: "Reasoning optimised for code",
   },
 ];
-
-// Group models by provider for UI
-export const allowedModelIds = new Set(chatModels.map((m) => m.id));
-
-export const modelsByProvider = chatModels.reduce(
-  (acc, model) => {
-    if (!acc[model.provider]) {
-      acc[model.provider] = [];
-    }
-    acc[model.provider].push(model);
-    return acc;
-  },
-  {} as Record<string, ChatModel[]>
-);

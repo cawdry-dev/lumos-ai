@@ -27,12 +27,7 @@ import {
   ModelSelectorName,
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
-import {
-  type ChatModel,
-  chatModels,
-  DEFAULT_CHAT_MODEL,
-  modelsByProvider,
-} from "@/lib/ai/models";
+import { type ChatModel, DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -85,7 +80,7 @@ function PureMultimodalInput({
   selectedVisibilityType: VisibilityType;
   selectedModelId: string;
   onModelChange?: (modelId: string) => void;
-  visibleModels?: ChatModel[];
+  visibleModels: ChatModel[];
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
@@ -472,24 +467,21 @@ function PureModelSelectorCompact({
 }: {
   selectedModelId: string;
   onModelChange?: (modelId: string) => void;
-  visibleModels?: ChatModel[];
+  visibleModels: ChatModel[];
 }) {
   const [open, setOpen] = useState(false);
 
-  // Use visible models if provided, otherwise fall back to all models
-  const models = visibleModels ?? chatModels;
-  const grouped = visibleModels
-    ? visibleModels.reduce(
-        (acc, model) => {
-          if (!acc[model.provider]) {
-            acc[model.provider] = [];
-          }
-          acc[model.provider].push(model);
-          return acc;
-        },
-        {} as Record<string, ChatModel[]>
-      )
-    : modelsByProvider;
+  const models = visibleModels;
+  const grouped = visibleModels.reduce(
+    (acc, model) => {
+      if (!acc[model.provider]) {
+        acc[model.provider] = [];
+      }
+      acc[model.provider].push(model);
+      return acc;
+    },
+    {} as Record<string, ChatModel[]>
+  );
 
   const selectedModel =
     models.find((m) => m.id === selectedModelId) ??

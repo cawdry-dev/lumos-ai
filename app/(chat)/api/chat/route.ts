@@ -7,12 +7,10 @@ import {
   stepCountIs,
   streamText,
 } from "ai";
-import { checkBotId } from "botid/server";
 import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
 import { auth, type UserType } from "@/lib/supabase/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
-import { allowedModelIds } from "@/lib/ai/models";
 import { getVisibleModels } from "@/lib/ai/models.server";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
@@ -21,6 +19,7 @@ import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { isProductionEnvironment } from "@/lib/constants";
+import { resolveImageUrlsForModel } from "@/lib/supabase/storage.server";
 import {
   createStreamId,
   deleteChatById,
@@ -66,21 +65,13 @@ export async function POST(request: Request) {
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
       requestBody;
 
-    const [botResult, session] = await Promise.all([checkBotId(), auth()]);
-
-    if (botResult.isBot) {
-      return new ChatbotError("unauthorized:chat").toResponse();
-    }
+    const session = await auth();
 
     if (!session?.user) {
       return new ChatbotError("unauthorized:chat").toResponse();
     }
 
-    if (!allowedModelIds.has(selectedChatModel)) {
-      return new ChatbotError("bad_request:api").toResponse();
-    }
-
-    // Check the selected model is enabled by an admin (if any models are enabled)
+    // Validate the selected model is available via the gateway and enabled by admin
     const visibleModels = await getVisibleModels();
     const visibleModelIds = new Set(visibleModels.map((m) => m.id));
     if (!visibleModelIds.has(selectedChatModel)) {
@@ -156,7 +147,9 @@ export async function POST(request: Request) {
       (selectedChatModel.includes("reasoning") &&
         !selectedChatModel.includes("non-reasoning"));
 
-    const modelMessages = await convertToModelMessages(uiMessages);
+    // Resolve supabase:attachments/ URLs to signed HTTPS URLs for the AI model
+    const resolvedMessages = await resolveImageUrlsForModel(uiMessages);
+    const modelMessages = await convertToModelMessages(resolvedMessages);
 
     const stream = createUIMessageStream({
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
