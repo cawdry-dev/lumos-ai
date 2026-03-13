@@ -6,9 +6,9 @@ import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://chat.vercel.ai"),
-  title: "Next.js Chatbot Template",
-  description: "Next.js chatbot template using the AI SDK.",
+  metadataBase: new URL("https://chat.paylinkhub.com"),
+  title: "Totemic AI",
+  description: "Totemic AI — internal AI assistant powered by the AI SDK.",
 };
 
 export const viewport = {
