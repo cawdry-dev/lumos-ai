@@ -625,6 +625,42 @@ export async function getProfileById(
   }
 }
 
+/** Creates a new invitation record in the database. */
+export async function createInvitation({
+  email,
+  role,
+  invitedBy,
+  token,
+  expiresAt,
+}: {
+  email: string;
+  role: string;
+  invitedBy: string;
+  token: string;
+  expiresAt: Date;
+}) {
+  try {
+    const [created] = await db
+      .insert(invitation)
+      .values({
+        email,
+        role,
+        invitedBy,
+        token,
+        createdAt: new Date(),
+        expiresAt,
+      })
+      .returning();
+
+    return created;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to create invitation"
+    );
+  }
+}
+
 /**
  * Retrieves a valid invitation by token.
  * Returns null if the token is expired or already accepted.
