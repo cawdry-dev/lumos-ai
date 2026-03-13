@@ -1,2 +1,2 @@
-DROP TABLE "Message";--> statement-breakpoint
-DROP TABLE "Vote";
+DROP TABLE IF EXISTS "Vote";--> statement-breakpoint
+DROP TABLE IF EXISTS "Message";

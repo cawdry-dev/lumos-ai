@@ -16,10 +16,10 @@ CREATE TABLE IF NOT EXISTS "Invitation" (
 	CONSTRAINT "Invitation_token_unique" UNIQUE("token")
 );
 --> statement-breakpoint
-ALTER TABLE "User" ADD COLUMN "role" varchar(20) DEFAULT 'editor' NOT NULL;--> statement-breakpoint
-ALTER TABLE "User" ADD COLUMN "displayName" text;--> statement-breakpoint
-ALTER TABLE "User" ADD COLUMN "invitedBy" uuid;--> statement-breakpoint
-ALTER TABLE "User" ADD COLUMN "invitedAt" timestamp;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "User" ADD COLUMN "role" varchar(20) DEFAULT 'editor' NOT NULL; EXCEPTION WHEN duplicate_column THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "User" ADD COLUMN "displayName" text; EXCEPTION WHEN duplicate_column THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "User" ADD COLUMN "invitedBy" uuid; EXCEPTION WHEN duplicate_column THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "User" ADD COLUMN "invitedAt" timestamp; EXCEPTION WHEN duplicate_column THEN null; END $$;--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "EnabledModel" ADD CONSTRAINT "EnabledModel_enabledBy_User_id_fk" FOREIGN KEY ("enabledBy") REFERENCES "public"."User"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
