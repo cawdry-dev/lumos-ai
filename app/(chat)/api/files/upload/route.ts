@@ -1,8 +1,8 @@
-import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { auth } from "@/lib/supabase/auth";
+import { createClient } from "@/lib/supabase/server";
 
 // Use Blob instead of File since File is not available in Node.js environment
 const FileSchema = z.object({
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   const session = await auth();
 
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
   if (request.body === null) {
@@ -51,18 +51,42 @@ export async function POST(request: Request) {
     const fileBuffer = await file.arrayBuffer();
 
     try {
-      const data = await put(`${filename}`, fileBuffer, {
-        access: "public",
-      });
+      const supabase = await createClient();
 
-      return NextResponse.json(data);
+      // Generate a unique path to avoid collisions
+      const storagePath = `${session.user.id}/${Date.now()}-${filename}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("attachments")
+        .upload(storagePath, fileBuffer, {
+          contentType: file.type,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        return NextResponse.json(
+          { error: "Upload failed" },
+          { status: 500 },
+        );
+      }
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("attachments").getPublicUrl(storagePath);
+
+      // Return the same shape the client expects (url, pathname, contentType)
+      return NextResponse.json({
+        url: publicUrl,
+        pathname: storagePath,
+        contentType: file.type,
+      });
     } catch (_error) {
       return NextResponse.json({ error: "Upload failed" }, { status: 500 });
     }
   } catch (_error) {
     return NextResponse.json(
       { error: "Failed to process request" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
