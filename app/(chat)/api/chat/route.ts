@@ -19,7 +19,7 @@ import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { isProductionEnvironment } from "@/lib/constants";
-import { resolveImageUrlsForModel } from "@/lib/supabase/storage";
+import { resolveImageUrlsForModel } from "@/lib/supabase/storage.server";
 import {
   createStreamId,
   deleteChatById,
