@@ -16,6 +16,7 @@ import {
   ToolInput,
   ToolOutput,
 } from "./elements/tool";
+import { resolveAttachmentUrl } from "@/lib/supabase/storage";
 import { SparklesIcon } from "./icons";
 import { MessageActions } from "./message-actions";
 import { MessageEditor } from "./message-editor";
@@ -96,7 +97,7 @@ const PurePreviewMessage = ({
                   attachment={{
                     name: attachment.filename ?? "file",
                     contentType: attachment.mediaType,
-                    url: attachment.url,
+                    url: resolveAttachmentUrl(attachment.url),
                   }}
                   key={attachment.url}
                 />

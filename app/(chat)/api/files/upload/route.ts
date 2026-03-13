@@ -70,13 +70,10 @@ export async function POST(request: Request) {
         );
       }
 
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("attachments").getPublicUrl(storagePath);
-
-      // Return the same shape the client expects (url, pathname, contentType)
+      // Return the storage path with a scheme prefix so it can be
+      // resolved to a signed URL at render time (private bucket).
       return NextResponse.json({
-        url: publicUrl,
+        url: `supabase:attachments/${storagePath}`,
         pathname: storagePath,
         contentType: file.type,
       });
