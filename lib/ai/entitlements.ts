@@ -5,14 +5,13 @@ type Entitlements = {
 };
 
 export const entitlementsByUserType: Record<UserType, Entitlements> = {
-  /*
-   * For users with an account
-   */
-  regular: {
-    maxMessagesPerHour: 10,
+  /** Entitlements for admin users. */
+  admin: {
+    maxMessagesPerHour: 100,
   },
 
-  /*
-   * TODO: For users with an account and a paid membership
-   */
+  /** Entitlements for editor users. */
+  editor: {
+    maxMessagesPerHour: 100,
+  },
 };
