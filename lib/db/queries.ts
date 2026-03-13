@@ -24,6 +24,7 @@ import {
   chat,
   type DBMessage,
   document,
+  enabledModel,
   invitation,
   message,
   type Suggestion,
@@ -687,6 +688,47 @@ export async function getInvitationByToken(token: string) {
   }
 }
 
+/** Returns all enabled model rows from the EnabledModel table. */
+export async function getEnabledModels() {
+  try {
+    return await db.select().from(enabledModel);
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get enabled models"
+    );
+  }
+}
+
+/** Enables a model by upserting into the EnabledModel table. */
+export async function enableModel(id: string, userId: string) {
+  try {
+    return await db
+      .insert(enabledModel)
+      .values({ id, enabledAt: new Date(), enabledBy: userId })
+      .onConflictDoNothing();
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to enable model"
+    );
+  }
+}
+
+/** Disables a model by removing it from the EnabledModel table. */
+export async function disableModel(id: string) {
+  try {
+    return await db
+      .delete(enabledModel)
+      .where(eq(enabledModel.id, id));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to disable model"
+    );
+  }
+}
+
 /** Marks an invitation as accepted by setting acceptedAt to now. */
 export async function markInvitationAccepted(token: string) {
   try {
@@ -698,6 +740,68 @@ export async function markInvitationAccepted(token: string) {
     throw new ChatbotError(
       "bad_request:database",
       "Failed to mark invitation as accepted"
+    );
+  }
+}
+
+/** Returns all users ordered by email. */
+export async function getAllUsers(): Promise<User[]> {
+  try {
+    return await db.select().from(user).orderBy(asc(user.email));
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to get all users");
+  }
+}
+
+/** Updates a user's role. */
+export async function updateUserRole(id: string, role: string) {
+  try {
+    const [updated] = await db
+      .update(user)
+      .set({ role })
+      .where(eq(user.id, id))
+      .returning();
+
+    return updated;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to update user role"
+    );
+  }
+}
+
+/** Returns pending invitations (not accepted, not expired), ordered by createdAt desc. */
+export async function getPendingInvitations() {
+  try {
+    return await db
+      .select()
+      .from(invitation)
+      .where(
+        and(
+          isNull(invitation.acceptedAt),
+          gt(invitation.expiresAt, new Date())
+        )
+      )
+      .orderBy(desc(invitation.createdAt));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get pending invitations"
+    );
+  }
+}
+
+/** Deletes an invitation by ID. */
+export async function revokeInvitation(id: string) {
+  try {
+    return await db
+      .delete(invitation)
+      .where(eq(invitation.id, id));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to revoke invitation"
     );
   }
 }

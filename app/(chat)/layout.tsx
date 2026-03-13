@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { DataStreamProvider } from "@/components/data-stream-provider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { getProfileById } from "@/lib/db/queries";
 import { createClient } from "@/lib/supabase/server";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -32,9 +33,12 @@ async function SidebarWrapper({ children }: { children: React.ReactNode }) {
   } = await supabase.auth.getUser();
   const isCollapsed = cookieStore.get("sidebar_state")?.value !== "true";
 
+  // Fetch the profile to get the user's role for the sidebar
+  const profile = user ? await getProfileById(user.id) : null;
+
   return (
     <SidebarProvider defaultOpen={!isCollapsed}>
-      <AppSidebar user={user ?? undefined} />
+      <AppSidebar user={user ?? undefined} userRole={profile?.role} />
       <SidebarInset>{children}</SidebarInset>
     </SidebarProvider>
   );

@@ -1,5 +1,9 @@
 import { auth } from "@/lib/supabase/auth";
-import { createInvitation } from "@/lib/db/queries";
+import {
+  createInvitation,
+  getPendingInvitations,
+  revokeInvitation,
+} from "@/lib/db/queries";
 import { sendInvitationEmail } from "@/lib/email/resend";
 
 /**
@@ -88,3 +92,89 @@ export async function POST(request: Request) {
   }
 }
 
+
+
+/**
+ * GET /api/admin/invitations
+ *
+ * Returns all pending invitations. Only accessible by admins.
+ */
+export async function GET() {
+  const session = await auth();
+
+  if (!session) {
+    return Response.json(
+      { error: "Authentication required." },
+      { status: 401 }
+    );
+  }
+
+  if (session.user.role !== "admin") {
+    return Response.json(
+      { error: "Forbidden. Only admins can view invitations." },
+      { status: 403 }
+    );
+  }
+
+  try {
+    const invitations = await getPendingInvitations();
+    return Response.json(invitations);
+  } catch (error) {
+    console.error("Failed to fetch invitations:", error);
+    return Response.json(
+      { error: "Failed to fetch invitations." },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/admin/invitations
+ *
+ * Revokes (deletes) an invitation by ID. Only accessible by admins.
+ */
+export async function DELETE(request: Request) {
+  const session = await auth();
+
+  if (!session) {
+    return Response.json(
+      { error: "Authentication required." },
+      { status: 401 }
+    );
+  }
+
+  if (session.user.role !== "admin") {
+    return Response.json(
+      { error: "Forbidden. Only admins can revoke invitations." },
+      { status: 403 }
+    );
+  }
+
+  let body: { id?: string };
+
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+
+  const { id } = body;
+
+  if (!id || typeof id !== "string") {
+    return Response.json(
+      { error: "A valid invitation ID is required." },
+      { status: 400 }
+    );
+  }
+
+  try {
+    await revokeInvitation(id);
+    return Response.json({ success: true });
+  } catch (error) {
+    console.error("Failed to revoke invitation:", error);
+    return Response.json(
+      { error: "Failed to revoke invitation." },
+      { status: 500 }
+    );
+  }
+}
