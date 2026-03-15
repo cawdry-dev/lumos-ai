@@ -7,6 +7,7 @@ import {
   index,
   integer,
   json,
+  numeric,
   pgTable,
   primaryKey,
   text,
@@ -41,10 +42,18 @@ export const user = pgTable("User", {
   role: varchar("role", { length: 20 }).notNull().default("editor"),
   /** Optional display name shown in the UI. */
   displayName: text("displayName"),
+  /** Whether this user is exempt from MFA enrolment (admin-toggled). */
+  mfaExempt: boolean("mfaExempt").notNull().default(false),
   /** The user who invited this user, if applicable. */
   invitedBy: uuid("invitedBy"),
   /** Timestamp when the invitation was sent. */
   invitedAt: timestamp("invitedAt"),
+  /** Per-user daily cost limit in cents (pence). Null means use role default. */
+  dailyCostLimitCents: integer("dailyCostLimitCents"),
+  /** Per-user monthly cost limit in cents (pence). Null means use role default. */
+  monthlyCostLimitCents: integer("monthlyCostLimitCents"),
+  /** Which SSO provider the user signed up with, or null for email+password. */
+  ssoProvider: varchar("ssoProvider", { length: 20 }),
 }, (table) => ({
   invitedByRef: foreignKey({
     columns: [table.invitedBy],
@@ -338,3 +347,86 @@ export const knowledgeChunk = pgTable(
 );
 
 export type KnowledgeChunk = InferSelectModel<typeof knowledgeChunk>;
+
+// ---------------------------------------------------------------------------
+// Token usage & model pricing tables
+// ---------------------------------------------------------------------------
+
+/** Records token usage for every AI call (chat, embedding, artifact, title, suggestion). */
+export const tokenUsage = pgTable(
+  "TokenUsage",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    userId: uuid("userId")
+      .notNull()
+      .references(() => user.id),
+    /** Null for non-chat usage such as embeddings or ingestion. */
+    chatId: uuid("chatId"),
+    /** Optional co-pilot that triggered this usage. */
+    copilotId: uuid("copilotId"),
+    /** Model identifier, e.g. "openai/gpt-4.1-mini". */
+    modelId: varchar("modelId", { length: 100 }).notNull(),
+    promptTokens: integer("promptTokens").notNull().default(0),
+    completionTokens: integer("completionTokens").notNull().default(0),
+    totalTokens: integer("totalTokens").notNull().default(0),
+    /** Estimated cost in cents (pence), calculated from model pricing. */
+    estimatedCostCents: integer("estimatedCostCents").notNull().default(0),
+    /** The type of AI call that generated this usage. */
+    usageType: varchar("usageType", {
+      length: 20,
+      enum: ["chat", "embedding", "artifact", "title", "suggestion"],
+    }).notNull(),
+    createdAt: timestamp("createdAt").notNull(),
+  },
+  (table) => ({
+    userIdx: index("tokenUsage_userId_idx").on(table.userId),
+    createdAtIdx: index("tokenUsage_createdAt_idx").on(table.createdAt),
+    chatRef: foreignKey({
+      columns: [table.chatId],
+      foreignColumns: [chat.id],
+    }),
+    copilotRef: foreignKey({
+      columns: [table.copilotId],
+      foreignColumns: [copilot.id],
+    }),
+  })
+);
+
+export type TokenUsage = InferSelectModel<typeof tokenUsage>;
+
+/** Admin-editable pricing table for AI models. */
+export const modelPricing = pgTable("ModelPricing", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  /** Glob or exact match pattern, e.g. "openai/gpt-4.1-*". */
+  modelPattern: varchar("modelPattern", { length: 200 }).notNull(),
+  /** Price in cents per 1K prompt tokens. */
+  promptPricePer1kTokens: numeric("promptPricePer1kTokens").notNull(),
+  /** Price in cents per 1K completion tokens. */
+  completionPricePer1kTokens: numeric("completionPricePer1kTokens").notNull(),
+  isActive: boolean("isActive").notNull().default(true),
+  updatedAt: timestamp("updatedAt").notNull(),
+});
+
+export type ModelPricing = InferSelectModel<typeof modelPricing>;
+
+// ---------------------------------------------------------------------------
+// SSO domain whitelist
+// ---------------------------------------------------------------------------
+
+/** Whitelisted email domains that allow automatic SSO user provisioning. */
+export const allowedDomain = pgTable("AllowedDomain", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  /** Email domain, e.g. "yourcompany.com". */
+  domain: varchar("domain", { length: 255 }).notNull(),
+  /** Default role assigned to auto-provisioned users. */
+  defaultRole: varchar("defaultRole", { length: 20 }).notNull().default("editor"),
+  /** Restrict to a specific SSO provider, or allow any. */
+  ssoProvider: varchar("ssoProvider", { length: 20 }).notNull().default("any"),
+  /** The admin who created this whitelist entry. */
+  createdBy: uuid("createdBy")
+    .notNull()
+    .references(() => user.id),
+  createdAt: timestamp("createdAt").notNull(),
+});
+
+export type AllowedDomain = InferSelectModel<typeof allowedDomain>;

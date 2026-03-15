@@ -11,6 +11,7 @@ import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
 import { auth, type UserType } from "@/lib/supabase/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
+import { checkCostLimits, recordUsage } from "@/lib/ai/usage";
 import { getVisibleModels } from "@/lib/ai/models.server";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
@@ -116,6 +117,12 @@ export async function POST(request: Request) {
       return new ChatbotError("rate_limit:chat").toResponse();
     }
 
+    // Pre-flight cost limit check
+    const costLimitExceeded = await checkCostLimits(session.user.id, userType);
+    if (costLimitExceeded) {
+      return new ChatbotError("usage_limit:chat").toResponse();
+    }
+
     const isToolApprovalFlow = Boolean(messages);
 
     const chat = await getChatById({ id });
@@ -137,7 +144,7 @@ export async function POST(request: Request) {
         visibility: selectedVisibilityType,
         copilotId: copilotId ?? null,
       });
-      titlePromise = generateTitleFromUserMessage({ message });
+      titlePromise = generateTitleFromUserMessage({ message, userId: session.user.id });
     }
 
     const uiMessages = isToolApprovalFlow
@@ -266,6 +273,19 @@ export async function POST(request: Request) {
         dataStream.merge(
           result.toUIMessageStream({ sendReasoning: isReasoningModel })
         );
+
+        // Record chat token usage once the stream completes
+        result.usage.then((usage) => {
+          recordUsage({
+            userId: session.user.id,
+            chatId: id,
+            copilotId: copilotId ?? null,
+            modelId: selectedChatModel,
+            promptTokens: usage.inputTokens ?? 0,
+            completionTokens: usage.outputTokens ?? 0,
+            usageType: "chat",
+          });
+        });
 
         if (titlePromise) {
           const title = await titlePromise;

@@ -2,6 +2,7 @@ import { streamObject } from "ai";
 import { z } from "zod";
 import { updateDocumentPrompt } from "@/lib/ai/prompts";
 import { getArtifactModel } from "@/lib/ai/providers";
+import { recordUsage } from "@/lib/ai/usage";
 import { createDocumentHandler } from "@/lib/artifacts/server";
 
 const chartSchema = z.object({
@@ -19,10 +20,10 @@ const chartSchema = z.object({
 
 export const chartDocumentHandler = createDocumentHandler<"chart">({
   kind: "chart",
-  onCreateDocument: async ({ title, dataStream }) => {
+  onCreateDocument: async ({ title, dataStream, session }) => {
     let draftContent = "";
 
-    const { fullStream } = streamObject({
+    const { fullStream, usage } = streamObject({
       model: getArtifactModel(),
       system:
         "Generate a chart specification as JSON based on the user's request. " +
@@ -54,12 +55,25 @@ export const chartDocumentHandler = createDocumentHandler<"chart">({
       transient: true,
     });
 
+    // Record artifact creation token usage
+    if (session.user?.id) {
+      usage.then((u) => {
+        recordUsage({
+          userId: session.user.id,
+          modelId: "anthropic/claude-haiku-4.5",
+          promptTokens: u.inputTokens ?? 0,
+          completionTokens: u.outputTokens ?? 0,
+          usageType: "artifact",
+        });
+      });
+    }
+
     return draftContent;
   },
-  onUpdateDocument: async ({ document, description, dataStream }) => {
+  onUpdateDocument: async ({ document, description, dataStream, session }) => {
     let draftContent = "";
 
-    const { fullStream } = streamObject({
+    const { fullStream, usage } = streamObject({
       model: getArtifactModel(),
       system: updateDocumentPrompt(document.content, "chart"),
       prompt: description,
@@ -78,6 +92,19 @@ export const chartDocumentHandler = createDocumentHandler<"chart">({
 
         draftContent = json;
       }
+    }
+
+    // Record artifact update token usage
+    if (session.user?.id) {
+      usage.then((u) => {
+        recordUsage({
+          userId: session.user.id,
+          modelId: "anthropic/claude-haiku-4.5",
+          promptTokens: u.inputTokens ?? 0,
+          completionTokens: u.outputTokens ?? 0,
+          usageType: "artifact",
+        });
+      });
     }
 
     return draftContent;

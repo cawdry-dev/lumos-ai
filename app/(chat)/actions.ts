@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import type { VisibilityType } from "@/components/visibility-selector";
 import { titlePrompt } from "@/lib/ai/prompts";
 import { getTitleModel } from "@/lib/ai/providers";
+import { recordUsage } from "@/lib/ai/usage";
 import {
   deleteMessagesByChatIdAfterTimestamp,
   getMessageById,
@@ -19,14 +20,28 @@ export async function saveChatModelAsCookie(model: string) {
 
 export async function generateTitleFromUserMessage({
   message,
+  userId,
 }: {
   message: UIMessage;
+  userId?: string;
 }) {
-  const { text } = await generateText({
+  const { text, usage } = await generateText({
     model: getTitleModel(),
     system: titlePrompt,
     prompt: getTextFromMessage(message),
   });
+
+  // Record title generation token usage
+  if (userId) {
+    recordUsage({
+      userId,
+      modelId: "google/gemini-2.5-flash-lite",
+      promptTokens: usage.inputTokens ?? 0,
+      completionTokens: usage.outputTokens ?? 0,
+      usageType: "title",
+    });
+  }
+
   return text
     .replace(/^[#*"\s]+/, "")
     .replace(/["]+$/, "")
