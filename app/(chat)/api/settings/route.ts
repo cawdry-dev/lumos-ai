@@ -26,6 +26,7 @@ export async function GET() {
       displayName: profile.displayName,
       accentColour: profile.accentColour,
       ssoProvider: profile.ssoProvider,
+      ttsVoice: profile.ttsVoice,
     });
   } catch (error) {
     console.error("Failed to get profile:", error);
@@ -51,7 +52,7 @@ export async function PATCH(request: Request) {
     );
   }
 
-  let body: { displayName?: string; accentColour?: string };
+  let body: { displayName?: string; accentColour?: string; ttsVoice?: string };
 
   try {
     body = await request.json();
@@ -59,7 +60,7 @@ export async function PATCH(request: Request) {
     return Response.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { displayName, accentColour } = body;
+  const { displayName, accentColour, ttsVoice } = body;
 
   // Validate accentColour if provided
   if (
@@ -81,10 +82,20 @@ export async function PATCH(request: Request) {
     );
   }
 
+  // Validate ttsVoice if provided
+  const VALID_VOICES = ["alloy", "ash", "coral", "sage", "echo", "shimmer"];
+  if (ttsVoice !== undefined && ttsVoice !== null && !VALID_VOICES.includes(ttsVoice)) {
+    return Response.json(
+      { error: "Invalid voice." },
+      { status: 400 },
+    );
+  }
+
   try {
     const updated = await updateProfile(session.user.id, {
       ...(displayName !== undefined ? { displayName } : {}),
       ...(accentColour !== undefined ? { accentColour } : {}),
+      ...(ttsVoice !== undefined ? { ttsVoice } : {}),
     });
 
     return Response.json(updated);

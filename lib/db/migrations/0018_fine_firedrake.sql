@@ -1,0 +1,1 @@
+ALTER TABLE "User" ADD COLUMN "ttsVoice" varchar(20);

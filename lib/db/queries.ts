@@ -667,12 +667,13 @@ export async function getProfileById(
   }
 }
 
-/** Updates a user's profile (display name and accent colour). */
+/** Updates a user's profile (display name, accent colour, TTS voice). */
 export async function updateProfile(
   id: string,
   data: {
     displayName?: string | null;
     accentColour?: string | null;
+    ttsVoice?: string | null;
   },
 ) {
   try {

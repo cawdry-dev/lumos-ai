@@ -18,6 +18,7 @@ export default async function SettingsPage() {
         displayName={session.user.displayName ?? ""}
         accentColour={session.user.accentColour}
         ssoProvider={session.user.ssoProvider}
+        ttsVoice={session.user.ttsVoice}
       />
     </div>
   );

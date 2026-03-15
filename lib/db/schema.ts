@@ -56,6 +56,8 @@ export const user = pgTable("User", {
   ssoProvider: varchar("ssoProvider", { length: 20 }),
   /** User-chosen accent colour hex code, e.g. "#6366f1". */
   accentColour: varchar("accentColour", { length: 7 }),
+  /** User-chosen TTS voice for text-to-speech playback. */
+  ttsVoice: varchar("ttsVoice", { length: 20 }),
 }, (table) => ({
   invitedByRef: foreignKey({
     columns: [table.invitedBy],
