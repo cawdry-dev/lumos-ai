@@ -1429,6 +1429,26 @@ export async function deleteModelPricing(id: string) {
   }
 }
 
+/** Finds a pricing rule by its exact model pattern. */
+export async function findPricingRuleByPattern(
+  pattern: string,
+): Promise<ModelPricing | null> {
+  try {
+    const [row] = await db
+      .select()
+      .from(modelPricing)
+      .where(eq(modelPricing.modelPattern, pattern))
+      .limit(1);
+
+    return row ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to find pricing rule by pattern",
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 // User cost limit queries
 // ---------------------------------------------------------------------------
