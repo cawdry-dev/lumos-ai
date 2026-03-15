@@ -42,6 +42,7 @@ import { PreviewAttachment } from "./preview-attachment";
 import { SuggestedActions } from "./suggested-actions";
 import { Button } from "./ui/button";
 import type { VisibilityType } from "./visibility-selector";
+import { VoiceRecorder } from "./voice-recorder";
 
 /** Small budget indicator that fetches the user's remaining daily/monthly budget. */
 function BudgetIndicator() {
@@ -447,6 +448,13 @@ function PureMultimodalInput({
               fileInputRef={fileInputRef}
               selectedModelId={selectedModelId}
               status={status}
+            />
+            <VoiceRecorder
+              chatId={chatId}
+              disabled={status !== "ready"}
+              onTranscription={(text) => {
+                setInput((prev) => (prev ? `${prev} ${text}` : text));
+              }}
             />
             <ModelSelectorCompact
               onModelChange={onModelChange}
