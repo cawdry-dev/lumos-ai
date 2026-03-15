@@ -1,9 +1,11 @@
-import type { InferUITool, UIMessage } from "ai";
+import type { InferUITool, ToolUIPart, UIMessage } from "ai";
 import { z } from "zod";
 import type { ArtifactKind } from "@/components/artifact";
 import type { createDocument } from "./ai/tools/create-document";
 import type { getWeather } from "./ai/tools/get-weather";
 import type { requestSuggestions } from "./ai/tools/request-suggestions";
+import type { searchKnowledge } from "./ai/tools/search-knowledge";
+import type { queryDatabase } from "./ai/tools/query-database";
 import type { updateDocument } from "./ai/tools/update-document";
 import type { Suggestion } from "./db/schema";
 
@@ -21,12 +23,24 @@ type updateDocumentTool = InferUITool<ReturnType<typeof updateDocument>>;
 type requestSuggestionsTool = InferUITool<
   ReturnType<typeof requestSuggestions>
 >;
+type searchKnowledgeTool = InferUITool<ReturnType<typeof searchKnowledge>>;
+type queryDatabaseTool = InferUITool<ReturnType<typeof queryDatabase>>;
+
+/** Generic UI tool type for gateway/provider tools typed as `any`. */
+type GenericUITool = {
+  input: Record<string, unknown>;
+  output: Record<string, unknown>;
+};
 
 export type ChatTools = {
   getWeather: weatherTool;
   createDocument: createDocumentTool;
   updateDocument: updateDocumentTool;
   requestSuggestions: requestSuggestionsTool;
+  searchKnowledge: searchKnowledgeTool;
+  queryDatabase: queryDatabaseTool;
+  perplexity_search: GenericUITool;
+  image_generation: GenericUITool;
 };
 
 export type CustomUIDataTypes = {

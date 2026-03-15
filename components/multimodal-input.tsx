@@ -37,7 +37,7 @@ import {
   PromptInputToolbar,
   PromptInputTools,
 } from "./elements/prompt-input";
-import { ArrowUpIcon, PaperclipIcon, StopIcon } from "./icons";
+import { ArrowUpIcon, GlobeIcon, ImageIcon, PaperclipIcon, StopIcon } from "./icons";
 import { PreviewAttachment } from "./preview-attachment";
 import { SuggestedActions } from "./suggested-actions";
 import { Button } from "./ui/button";
@@ -130,6 +130,11 @@ function PureMultimodalInput({
   selectedModelId,
   onModelChange,
   visibleModels,
+  enableWebSearch,
+  onToggleWebSearch,
+  enableImageGen,
+  onToggleImageGen,
+  supportsImageGen,
 }: {
   chatId: string;
   input: string;
@@ -146,6 +151,11 @@ function PureMultimodalInput({
   selectedModelId: string;
   onModelChange?: (modelId: string) => void;
   visibleModels: ChatModel[];
+  enableWebSearch: boolean;
+  onToggleWebSearch: (enabled: boolean) => void;
+  enableImageGen: boolean;
+  onToggleImageGen: (enabled: boolean) => void;
+  supportsImageGen: boolean;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
@@ -456,6 +466,40 @@ function PureMultimodalInput({
                 setInput((prev) => (prev ? `${prev} ${text}` : text));
               }}
             />
+            <Button
+              className={cn(
+                "aspect-square h-8 rounded-lg p-1 transition-colors hover:bg-accent",
+                enableWebSearch
+                  ? "text-foreground"
+                  : "text-muted-foreground/50"
+              )}
+              onClick={(event) => {
+                event.preventDefault();
+                onToggleWebSearch(!enableWebSearch);
+              }}
+              title={enableWebSearch ? "Web search enabled" : "Web search disabled"}
+              variant="ghost"
+            >
+              <GlobeIcon size={14} />
+            </Button>
+            {supportsImageGen && (
+              <Button
+                className={cn(
+                  "aspect-square h-8 rounded-lg p-1 transition-colors hover:bg-accent",
+                  enableImageGen
+                    ? "text-foreground"
+                    : "text-muted-foreground/50"
+                )}
+                onClick={(event) => {
+                  event.preventDefault();
+                  onToggleImageGen(!enableImageGen);
+                }}
+                title={enableImageGen ? "Image generation enabled" : "Image generation disabled"}
+                variant="ghost"
+              >
+                <ImageIcon size={14} />
+              </Button>
+            )}
             <ModelSelectorCompact
               onModelChange={onModelChange}
               selectedModelId={selectedModelId}
@@ -497,6 +541,15 @@ export const MultimodalInput = memo(
       return false;
     }
     if (prevProps.selectedModelId !== nextProps.selectedModelId) {
+      return false;
+    }
+    if (prevProps.enableWebSearch !== nextProps.enableWebSearch) {
+      return false;
+    }
+    if (prevProps.enableImageGen !== nextProps.enableImageGen) {
+      return false;
+    }
+    if (prevProps.supportsImageGen !== nextProps.supportsImageGen) {
       return false;
     }
 

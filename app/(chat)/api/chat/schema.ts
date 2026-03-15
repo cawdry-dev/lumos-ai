@@ -36,6 +36,10 @@ export const postRequestBodySchema = z.object({
   selectedVisibilityType: z.enum(["public", "private"]),
   /** Optional co-pilot ID to scope this chat session. */
   copilotId: z.string().uuid().nullable().optional(),
+  /** Whether to enable web search (perplexity_search) for this message. */
+  enableWebSearch: z.boolean().optional(),
+  /** Whether to enable image generation for this message. */
+  enableImageGen: z.boolean().optional(),
 });
 
 export type PostRequestBody = z.infer<typeof postRequestBodySchema>;

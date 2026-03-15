@@ -7,7 +7,6 @@
  *  - `application/pdf` (.pdf)
  */
 
-import { PDFParse } from "pdf-parse";
 
 /** MIME types we can extract text from. */
 const SUPPORTED_MIME_TYPES = new Set([
@@ -45,6 +44,7 @@ export async function extractText(
       return buffer.toString("utf-8");
 
     case "application/pdf": {
+      const { PDFParse } = await import("pdf-parse");
       const parser = new PDFParse({ data: new Uint8Array(buffer) });
       const result = await parser.getText();
       await parser.destroy();

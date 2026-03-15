@@ -85,6 +85,16 @@ export function Chat({
   );
   const selectedCopilotIdRef = useRef(selectedCopilotId);
 
+  // Tool toggle state — defaults are computed based on the model
+  const isReasoningModel =
+    currentModelId.includes("reasoning") || currentModelId.includes("think");
+  const supportsImageGen = currentModelId.startsWith("openai/gpt-5");
+
+  const [enableWebSearch, setEnableWebSearch] = useState(!isReasoningModel);
+  const [enableImageGen, setEnableImageGen] = useState(supportsImageGen);
+  const enableWebSearchRef = useRef(enableWebSearch);
+  const enableImageGenRef = useRef(enableImageGen);
+
   useEffect(() => {
     currentModelIdRef.current = currentModelId;
   }, [currentModelId]);
@@ -92,6 +102,23 @@ export function Chat({
   useEffect(() => {
     selectedCopilotIdRef.current = selectedCopilotId;
   }, [selectedCopilotId]);
+
+  useEffect(() => {
+    enableWebSearchRef.current = enableWebSearch;
+  }, [enableWebSearch]);
+
+  useEffect(() => {
+    enableImageGenRef.current = enableImageGen;
+  }, [enableImageGen]);
+
+  // Reset toggle defaults when model changes
+  useEffect(() => {
+    const reasoning =
+      currentModelId.includes("reasoning") || currentModelId.includes("think");
+    const imgGen = currentModelId.startsWith("openai/gpt-5");
+    setEnableWebSearch(!reasoning);
+    setEnableImageGen(imgGen);
+  }, [currentModelId]);
 
   const {
     messages,
@@ -143,6 +170,8 @@ export function Chat({
             selectedChatModel: currentModelIdRef.current,
             selectedVisibilityType: visibilityType,
             copilotId: selectedCopilotIdRef.current,
+            enableWebSearch: enableWebSearchRef.current,
+            enableImageGen: enableImageGenRef.current,
             ...request.body,
           },
         };
@@ -240,9 +269,13 @@ export function Chat({
             <MultimodalInput
               attachments={attachments}
               chatId={id}
+              enableImageGen={enableImageGen}
+              enableWebSearch={enableWebSearch}
               input={input}
               messages={messages}
               onModelChange={setCurrentModelId}
+              onToggleImageGen={setEnableImageGen}
+              onToggleWebSearch={setEnableWebSearch}
               selectedModelId={currentModelId}
               selectedVisibilityType={visibilityType}
               sendMessage={sendMessage}
@@ -251,6 +284,7 @@ export function Chat({
               setMessages={setMessages}
               status={status}
               stop={stop}
+              supportsImageGen={supportsImageGen}
               visibleModels={visibleModels}
             />
           )}
@@ -261,9 +295,13 @@ export function Chat({
         addToolApprovalResponse={addToolApprovalResponse}
         attachments={attachments}
         chatId={id}
+        enableImageGen={enableImageGen}
+        enableWebSearch={enableWebSearch}
         input={input}
         isReadonly={isReadonly}
         messages={messages}
+        onToggleImageGen={setEnableImageGen}
+        onToggleWebSearch={setEnableWebSearch}
         regenerate={regenerate}
         selectedModelId={currentModelId}
         selectedVisibilityType={visibilityType}
@@ -273,6 +311,7 @@ export function Chat({
         setMessages={setMessages}
         status={status}
         stop={stop}
+        supportsImageGen={supportsImageGen}
         visibleModels={visibleModels}
         votes={votes}
       />
