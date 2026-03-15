@@ -23,6 +23,7 @@ import { searchKnowledge } from "@/lib/ai/tools/search-knowledge";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { queryDatabase } from "@/lib/ai/tools/query-database";
 import { webSearch } from "@/lib/ai/tools/web-search";
+import { getMcpTools, closeMcpClients, type MCPClientHandle } from "@/lib/ai/mcp";
 import type { DbType, SshConfig } from "@/lib/rag/db-connector";
 import { isProductionEnvironment } from "@/lib/constants";
 import { resolveImageUrlsForModel } from "@/lib/supabase/storage.server";
@@ -240,6 +241,28 @@ export async function POST(request: Request) {
           }
         : undefined;
 
+    // Connect to MCP servers (if configured) and gather their tools
+    let mcpClients: MCPClientHandle[] = [];
+    let mcpTools: Record<string, unknown> = {};
+    let mcpInstructions: string[] = [];
+
+    if (activeCopilot?.mcpServers && activeCopilot.mcpServers.length > 0) {
+      try {
+        const mcpResult = await getMcpTools(activeCopilot.mcpServers);
+        mcpClients = mcpResult.clients;
+        mcpTools = mcpResult.tools;
+        mcpInstructions = mcpResult.instructions;
+      } catch (error) {
+        console.error("[chat] Failed to initialise MCP tools:", error);
+        // Continue without MCP tools
+      }
+    }
+
+    // Build the combined system prompt, appending any MCP server instructions
+    const mcpSystemSuffix = mcpInstructions.length > 0
+      ? `\n\n${mcpInstructions.join("\n\n")}`
+      : "";
+
     const stream = createUIMessageStream({
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
       execute: async ({ writer: dataStream }) => {
@@ -248,7 +271,9 @@ export async function POST(request: Request) {
           system: systemPrompt({
             selectedChatModel,
             requestHints,
-            copilotSystemPrompt: activeCopilot?.systemPrompt,
+            copilotSystemPrompt: activeCopilot?.systemPrompt
+              ? `${activeCopilot.systemPrompt}${mcpSystemSuffix}`
+              : mcpSystemSuffix || undefined,
             isKnowledgeCopilot,
             isDataCopilot,
           }),
@@ -286,6 +311,7 @@ export async function POST(request: Request) {
                   }),
                 }
               : {}),
+            ...mcpTools,
           },
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,
@@ -321,6 +347,11 @@ export async function POST(request: Request) {
       },
       generateId: generateUUID,
       onFinish: async ({ messages: finishedMessages }) => {
+        // Close MCP clients now that the stream is done
+        if (mcpClients.length > 0) {
+          await closeMcpClients(mcpClients);
+        }
+
         if (isToolApprovalFlow) {
           for (const finishedMsg of finishedMessages) {
             const existingMsg = uiMessages.find((m) => m.id === finishedMsg.id);

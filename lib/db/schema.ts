@@ -69,6 +69,20 @@ export type User = InferSelectModel<typeof user>;
 // Co-pilot & Knowledge tables
 // ---------------------------------------------------------------------------
 
+/** Configuration for a single MCP server attached to a co-pilot. */
+export interface McpServerConfig {
+  /** Human-readable label, e.g. "Jira". */
+  name: string;
+  /** HTTP(S) URL of the MCP server. */
+  url: string;
+  /** Optional bearer token / API key sent as Authorization header. */
+  apiKey?: string;
+  /** Optional extra headers to send with every request. */
+  headers?: Record<string, string>;
+  /** Optional instructions appended to the system prompt when this server is active. */
+  instructions?: string;
+}
+
 /** A co-pilot persona that users can chat with. */
 export const copilot = pgTable("Copilot", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
@@ -100,6 +114,8 @@ export const copilot = pgTable("Copilot", {
   sshPrivateKey: text("sshPrivateKey"),
   /** Locked AI model for this co-pilot. When set, users cannot change the model. */
   modelId: varchar("modelId", { length: 255 }),
+  /** Optional MCP server configurations for this co-pilot. */
+  mcpServers: json("mcpServers").$type<McpServerConfig[] | null>(),
   /** Whether this co-pilot is available to users. */
   isActive: boolean("isActive").notNull().default(true),
   /** The user who created this co-pilot. */
