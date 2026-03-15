@@ -17,6 +17,7 @@ import {
   ToolOutput,
 } from "./elements/tool";
 import { resolveAttachmentUrl } from "@/lib/supabase/storage";
+import { BookOpen, Database, Globe, ImageIcon } from "lucide-react";
 import { SparklesIcon } from "./icons";
 import { MessageActions } from "./message-actions";
 import { MessageEditor } from "./message-editor";
@@ -308,6 +309,144 @@ const PurePreviewMessage = ({
                     result={part.output}
                   />
                 </div>
+              );
+            }
+
+            if (type === "tool-perplexity_search") {
+              const { toolCallId, state } = part;
+              const isRunning =
+                state === "input-available" || state === "input-streaming";
+
+              return (
+                <Tool defaultOpen={true} key={toolCallId}>
+                  <ToolHeader state={state} type="tool-perplexity_search" />
+                  <ToolContent>
+                    {isRunning && (
+                      <div className="flex items-center gap-2 px-4 py-3 text-muted-foreground text-sm">
+                        <Globe className="size-4 animate-pulse" />
+                        <span>Searching the web…</span>
+                      </div>
+                    )}
+                    {state === "output-available" && (
+                      <ToolOutput
+                        errorText={undefined}
+                        output={
+                          <div className="flex items-center gap-2 px-2 py-1 text-sm">
+                            <Globe className="size-4 text-blue-500" />
+                            <span>
+                              {Array.isArray((part.output as { sources?: unknown[] })?.sources)
+                                ? `Found ${(part.output as { sources: unknown[] }).sources.length} source(s)`
+                                : "Web search complete"}
+                            </span>
+                          </div>
+                        }
+                      />
+                    )}
+                  </ToolContent>
+                </Tool>
+              );
+            }
+
+            if (type === "tool-image_generation") {
+              const { toolCallId, state } = part;
+              const isRunning =
+                state === "input-available" || state === "input-streaming";
+
+              return (
+                <Tool defaultOpen={true} key={toolCallId}>
+                  <ToolHeader state={state} type="tool-image_generation" />
+                  <ToolContent>
+                    {isRunning && (
+                      <div className="flex items-center gap-2 px-4 py-3 text-muted-foreground text-sm">
+                        <ImageIcon className="size-4 animate-pulse" />
+                        <span>Generating image…</span>
+                      </div>
+                    )}
+                    {state === "output-available" && (
+                      <ToolOutput
+                        errorText={undefined}
+                        output={
+                          <div className="space-y-2 px-2 py-1">
+                            {(part.output as { url?: string })?.url ? (
+                              <img
+                                alt="Generated image"
+                                className="max-w-full rounded-md"
+                                src={(part.output as { url: string }).url}
+                              />
+                            ) : (
+                              <div className="flex items-center gap-2 text-sm">
+                                <ImageIcon className="size-4 text-green-500" />
+                                <span>Image generation complete</span>
+                              </div>
+                            )}
+                          </div>
+                        }
+                      />
+                    )}
+                  </ToolContent>
+                </Tool>
+              );
+            }
+
+            if (type === "tool-searchKnowledge") {
+              const { toolCallId, state } = part;
+              const isRunning =
+                state === "input-available" || state === "input-streaming";
+
+              return (
+                <Tool defaultOpen={true} key={toolCallId}>
+                  <ToolHeader state={state} type="tool-searchKnowledge" />
+                  <ToolContent>
+                    {isRunning && (
+                      <div className="flex items-center gap-2 px-4 py-3 text-muted-foreground text-sm">
+                        <BookOpen className="size-4 animate-pulse" />
+                        <span>Searching knowledge base…</span>
+                      </div>
+                    )}
+                    {state === "output-available" && (
+                      <ToolOutput
+                        errorText={undefined}
+                        output={
+                          <div className="flex items-center gap-2 px-2 py-1 text-sm">
+                            <BookOpen className="size-4 text-green-500" />
+                            <span>Knowledge base search complete</span>
+                          </div>
+                        }
+                      />
+                    )}
+                  </ToolContent>
+                </Tool>
+              );
+            }
+
+            if (type === "tool-queryDatabase") {
+              const { toolCallId, state } = part;
+              const isRunning =
+                state === "input-available" || state === "input-streaming";
+
+              return (
+                <Tool defaultOpen={true} key={toolCallId}>
+                  <ToolHeader state={state} type="tool-queryDatabase" />
+                  <ToolContent>
+                    {isRunning && (
+                      <div className="flex items-center gap-2 px-4 py-3 text-muted-foreground text-sm">
+                        <Database className="size-4 animate-pulse" />
+                        <span>Querying database…</span>
+                      </div>
+                    )}
+                    {state === "output-available" && (
+                      <ToolOutput
+                        errorText={undefined}
+                        output={
+                          <div className="flex items-center gap-2 px-2 py-1 text-sm">
+                            <Database className="size-4 text-green-500" />
+                            <span>Database query complete</span>
+                          </div>
+                        }
+                      />
+                    )}
+                  </ToolContent>
+                </Tool>
               );
             }
 
