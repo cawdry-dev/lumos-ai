@@ -28,7 +28,7 @@ export const Greeting = ({
           initial={{ opacity: 0, y: 10 }}
           transition={{ delay: 0.5 }}
         >
-          Hello there!
+          Welcome to Lumos ✦
         </motion.div>
         <motion.div
           animate={{ opacity: 1, y: 0 }}
@@ -39,13 +39,22 @@ export const Greeting = ({
         >
           How can I help you today?
         </motion.div>
+        <motion.div
+          animate={{ opacity: 1, y: 0 }}
+          className="text-sm text-zinc-400 italic"
+          exit={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 10 }}
+          transition={{ delay: 0.7 }}
+        >
+          Guiding Conversations, Illuminating Insights
+        </motion.div>
       </div>
 
       {copilots && copilots.length > 0 && onSelectCopilot && (
         <motion.div
           animate={{ opacity: 1, y: 0 }}
           initial={{ opacity: 0, y: 10 }}
-          transition={{ delay: 0.7 }}
+          transition={{ delay: 0.8 }}
         >
           <CopilotSelector
             copilots={copilots}
