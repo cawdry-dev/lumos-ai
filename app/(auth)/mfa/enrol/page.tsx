@@ -15,7 +15,7 @@ type MfaMethod = "totp" | "sms";
  */
 export default function MfaEnrolPage() {
   const router = useRouter();
-  const [method, setMethod] = useState<MfaMethod>("totp");
+  const [method, setMethod] = useState<MfaMethod | null>(null);
 
   const handleComplete = () => {
     // After successful enrolment, redirect to the app
@@ -36,27 +36,53 @@ export default function MfaEnrolPage() {
           </p>
         </div>
 
-        <div className="flex justify-center gap-2">
-          <Button
-            variant={method === "totp" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setMethod("totp")}
-          >
-            Authenticator App
-          </Button>
-          <Button
-            variant={method === "sms" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setMethod("sms")}
-          >
-            SMS
-          </Button>
-        </div>
-
-        {method === "totp" ? (
-          <MfaSetup onComplete={handleComplete} />
+        {method === null ? (
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-muted-foreground text-sm">
+              Choose your preferred verification method:
+            </p>
+            <div className="flex justify-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMethod("totp")}
+              >
+                Authenticator App
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMethod("sms")}
+              >
+                SMS
+              </Button>
+            </div>
+          </div>
         ) : (
-          <MfaSmsSetup onComplete={handleComplete} />
+          <div className="flex flex-col gap-4">
+            <div className="flex justify-center gap-2">
+              <Button
+                variant={method === "totp" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setMethod("totp")}
+              >
+                Authenticator App
+              </Button>
+              <Button
+                variant={method === "sms" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setMethod("sms")}
+              >
+                SMS
+              </Button>
+            </div>
+
+            {method === "totp" ? (
+              <MfaSetup onComplete={handleComplete} />
+            ) : (
+              <MfaSmsSetup onComplete={handleComplete} />
+            )}
+          </div>
         )}
       </div>
     </div>
