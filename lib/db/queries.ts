@@ -22,10 +22,16 @@ import { generateUUID } from "../utils";
 import {
   type Chat,
   chat,
+  copilot,
+  type Copilot,
+  copilotAccess,
   type DBMessage,
   document,
   enabledModel,
   invitation,
+  knowledgeChunk,
+  knowledgeDocument,
+  type KnowledgeDocument,
   message,
   type Suggestion,
   stream,
@@ -802,6 +808,315 @@ export async function revokeInvitation(id: string) {
     throw new ChatbotError(
       "bad_request:database",
       "Failed to revoke invitation"
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Co-pilot queries
+// ---------------------------------------------------------------------------
+
+/** Returns all co-pilots ordered by name. */
+export async function getCopilots() {
+  try {
+    return await db.select().from(copilot).orderBy(asc(copilot.name));
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to get co-pilots");
+  }
+}
+
+/** Returns a single co-pilot by ID. */
+export async function getCopilotById(id: string) {
+  try {
+    const [row] = await db.select().from(copilot).where(eq(copilot.id, id));
+    return row ?? null;
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to get co-pilot");
+  }
+}
+
+/** Creates a new co-pilot and returns it. */
+export async function createCopilot(values: {
+  name: string;
+  description: string;
+  emoji: string | null;
+  type: "knowledge" | "data";
+  systemPrompt: string | null;
+  dbConnectionString: string | null;
+  isActive: boolean;
+  createdBy: string;
+}) {
+  try {
+    const [created] = await db
+      .insert(copilot)
+      .values({
+        ...values,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return created;
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to create co-pilot");
+  }
+}
+
+/** Updates a co-pilot by ID and returns it. */
+export async function updateCopilot(
+  id: string,
+  values: {
+    name?: string;
+    description?: string;
+    emoji?: string | null;
+    type?: "knowledge" | "data";
+    systemPrompt?: string | null;
+    dbConnectionString?: string | null;
+    isActive?: boolean;
+  }
+) {
+  try {
+    const [updated] = await db
+      .update(copilot)
+      .set({ ...values, updatedAt: new Date() })
+      .where(eq(copilot.id, id))
+      .returning();
+    return updated ?? null;
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to update co-pilot");
+  }
+}
+
+/** Deletes a co-pilot (and cascading access rows) by ID. */
+export async function deleteCopilot(id: string) {
+  try {
+    await db.delete(copilotAccess).where(eq(copilotAccess.copilotId, id));
+    const [deleted] = await db
+      .delete(copilot)
+      .where(eq(copilot.id, id))
+      .returning();
+    return deleted ?? null;
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to delete co-pilot");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Co-pilot access queries
+// ---------------------------------------------------------------------------
+
+/** Returns users who have explicit access to a co-pilot. */
+export async function getCopilotAccessUsers(copilotId: string) {
+  try {
+    return await db
+      .select({
+        userId: copilotAccess.userId,
+        grantedAt: copilotAccess.grantedAt,
+        email: user.email,
+        displayName: user.displayName,
+      })
+      .from(copilotAccess)
+      .innerJoin(user, eq(copilotAccess.userId, user.id))
+      .where(eq(copilotAccess.copilotId, copilotId))
+      .orderBy(asc(user.email));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get co-pilot access users"
+    );
+  }
+}
+
+/** Grants a user access to a co-pilot. */
+export async function grantCopilotAccess(
+  copilotId: string,
+  userId: string,
+  grantedBy: string
+) {
+  try {
+    const [row] = await db
+      .insert(copilotAccess)
+      .values({
+        copilotId,
+        userId,
+        grantedBy,
+        grantedAt: new Date(),
+      })
+      .onConflictDoNothing()
+      .returning();
+    return row;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to grant co-pilot access"
+    );
+  }
+}
+
+/** Revokes a user's access to a co-pilot. */
+export async function revokeCopilotAccess(copilotId: string, userId: string) {
+  try {
+    return await db
+      .delete(copilotAccess)
+      .where(
+        and(
+          eq(copilotAccess.copilotId, copilotId),
+          eq(copilotAccess.userId, userId)
+        )
+      );
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to revoke co-pilot access"
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Knowledge Document helpers
+// ---------------------------------------------------------------------------
+
+/** Returns all documents belonging to a co-pilot. */
+export async function getKnowledgeDocuments(copilotId: string): Promise<KnowledgeDocument[]> {
+  try {
+    return await db
+      .select()
+      .from(knowledgeDocument)
+      .where(eq(knowledgeDocument.copilotId, copilotId))
+      .orderBy(desc(knowledgeDocument.createdAt));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get knowledge documents"
+    );
+  }
+}
+
+/** Returns a single knowledge document by ID. */
+export async function getKnowledgeDocumentById(id: string): Promise<KnowledgeDocument | null> {
+  try {
+    const [doc] = await db
+      .select()
+      .from(knowledgeDocument)
+      .where(eq(knowledgeDocument.id, id));
+    return doc ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get knowledge document by id"
+    );
+  }
+}
+
+/** Creates a new knowledge document record. */
+export async function createKnowledgeDocument(values: {
+  copilotId: string;
+  title: string;
+  fileName: string;
+  mimeType: string;
+  storagePath: string;
+  uploadedBy: string;
+}) {
+  try {
+    const now = new Date();
+    const [created] = await db
+      .insert(knowledgeDocument)
+      .values({
+        ...values,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+    return created;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to create knowledge document"
+    );
+  }
+}
+
+/** Updates a knowledge document's status and chunk count. */
+export async function updateKnowledgeDocumentStatus(
+  id: string,
+  status: "processing" | "ready" | "error",
+  chunkCount?: number
+) {
+  try {
+    const [updated] = await db
+      .update(knowledgeDocument)
+      .set({
+        status,
+        ...(chunkCount !== undefined ? { chunkCount } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(knowledgeDocument.id, id))
+      .returning();
+    return updated;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to update knowledge document status"
+    );
+  }
+}
+
+/** Deletes a knowledge document and its chunks. */
+export async function deleteKnowledgeDocument(id: string) {
+  try {
+    await db.delete(knowledgeChunk).where(eq(knowledgeChunk.documentId, id));
+    const [deleted] = await db
+      .delete(knowledgeDocument)
+      .where(eq(knowledgeDocument.id, id))
+      .returning();
+    return deleted;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to delete knowledge document"
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Knowledge Chunk helpers
+// ---------------------------------------------------------------------------
+
+/** Inserts chunks in bulk for a given document. */
+export async function insertKnowledgeChunks(
+  chunks: {
+    documentId: string;
+    content: string;
+    embedding: number[];
+    metadata?: Record<string, unknown>;
+    tokenCount: number;
+    chunkIndex: number;
+  }[]
+) {
+  try {
+    const now = new Date();
+    return await db.insert(knowledgeChunk).values(
+      chunks.map((c) => ({ ...c, createdAt: now }))
+    );
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to insert knowledge chunks"
+    );
+  }
+}
+
+/** Returns all chunks for a given document, ordered by index. */
+export async function getKnowledgeChunksByDocumentId(documentId: string) {
+  try {
+    return await db
+      .select()
+      .from(knowledgeChunk)
+      .where(eq(knowledgeChunk.documentId, documentId))
+      .orderBy(asc(knowledgeChunk.chunkIndex));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get knowledge chunks by document id"
     );
   }
 }

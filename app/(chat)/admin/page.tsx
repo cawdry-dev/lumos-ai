@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { auth } from "@/lib/supabase/auth";
 import { getAllUsers, getPendingInvitations } from "@/lib/db/queries";
 import { InvitationForm } from "@/components/admin/invitation-form";
@@ -5,6 +6,7 @@ import { PendingInvitations } from "@/components/admin/pending-invitations";
 import { ModelManagement } from "@/components/admin/model-management";
 import { UserList } from "@/components/admin/user-list";
 import { getGatewayModels } from "@/lib/ai/gateway";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Bot, ChevronRight } from "lucide-react";
 
 export default async function AdminPage() {
   // Auth is already checked in layout, but we need the session for the current user ID
@@ -71,6 +74,27 @@ export default async function AdminPage() {
             <PendingInvitations invitations={serialisedInvitations} />
           </div>
         </CardContent>
+      </Card>
+
+      {/* Co-pilots section */}
+      <Card className="mb-8">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl">Co-pilots</CardTitle>
+              <CardDescription>
+                Create and manage co-pilots with custom personas and knowledge bases.
+              </CardDescription>
+            </div>
+            <Button variant="outline" asChild>
+              <Link href="/admin/copilots">
+                <Bot className="mr-2 size-4" />
+                Manage
+                <ChevronRight className="ml-1 size-4" />
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
       </Card>
 
       {/* Model management section */}
