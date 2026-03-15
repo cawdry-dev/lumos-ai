@@ -3,9 +3,16 @@ import "server-only";
 import OpenAI from "openai";
 import { recordUsage } from "./usage";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let _openai: OpenAI | null = null;
+
+function getOpenAI(): OpenAI {
+  if (!_openai) {
+    _openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return _openai;
+}
 
 /**
  * Transcribes an audio file using OpenAI Whisper API.
@@ -16,7 +23,7 @@ export async function transcribeAudio(params: {
   userId: string;
   chatId?: string | null;
 }): Promise<{ text: string; durationSeconds: number }> {
-  const transcription = await openai.audio.transcriptions.create({
+  const transcription = await getOpenAI().audio.transcriptions.create({
     file: params.audioFile,
     model: "whisper-1",
     language: "en",
@@ -53,7 +60,7 @@ export async function generateSpeech(params: {
   userId: string;
   chatId?: string | null;
 }): Promise<ReadableStream<Uint8Array>> {
-  const response = await openai.audio.speech.create({
+  const response = await getOpenAI().audio.speech.create({
     model: "tts-1",
     voice: "alloy",
     input: params.text,
