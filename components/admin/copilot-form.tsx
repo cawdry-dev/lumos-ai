@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, Trash2 } from "lucide-react";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,15 @@ const EMOJI_OPTIONS = [
   "⚡", "🛠️", "📝", "🌐", "🔒", "📈", "🎨", "🧪",
 ];
 
+/** Shape of a single MCP server entry in the form. */
+export interface McpServerEntry {
+  name: string;
+  url: string;
+  apiKey: string;
+  headers: string; // JSON string — parsed on submit
+  instructions: string;
+}
+
 export type CopilotFormData = {
   id?: string;
   name: string;
@@ -36,7 +46,16 @@ export type CopilotFormData = {
   sshUsername: string;
   sshPrivateKey: string;
   modelId: string;
+  mcpServers: McpServerEntry[];
   isActive: boolean;
+};
+
+const EMPTY_MCP_SERVER: McpServerEntry = {
+  name: "",
+  url: "",
+  apiKey: "",
+  headers: "",
+  instructions: "",
 };
 
 const DEFAULTS: CopilotFormData = {
@@ -52,6 +71,7 @@ const DEFAULTS: CopilotFormData = {
   sshUsername: "",
   sshPrivateKey: "",
   modelId: "",
+  mcpServers: [],
   isActive: true,
 };
 
@@ -125,6 +145,17 @@ export function CopilotForm({
           sshUsername: data.type === "data" && data.sshHost ? (data.sshUsername || null) : null,
           sshPrivateKey: data.type === "data" && data.sshHost ? (data.sshPrivateKey || null) : null,
           modelId: data.modelId || null,
+          mcpServers: data.mcpServers.length > 0
+            ? data.mcpServers
+                .filter((s) => s.name.trim() && s.url.trim())
+                .map((s) => ({
+                  name: s.name.trim(),
+                  url: s.url.trim(),
+                  ...(s.apiKey ? { apiKey: s.apiKey } : {}),
+                  ...(s.headers ? { headers: JSON.parse(s.headers) } : {}),
+                  ...(s.instructions ? { instructions: s.instructions } : {}),
+                }))
+            : null,
           isActive: data.isActive,
         }),
       });
@@ -353,6 +384,120 @@ export function CopilotForm({
           </div>
         </>
       )}
+
+      {/* MCP Servers */}
+      <fieldset className="space-y-4 rounded-md border p-4">
+        <legend className="px-2 text-sm font-medium">MCP Servers (optional)</legend>
+        <p className="text-xs text-muted-foreground">
+          Connect external tool servers using the Model Context Protocol.
+        </p>
+
+        {data.mcpServers.map((server, idx) => (
+          <div key={idx} className="space-y-3 rounded-md border p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Server {idx + 1}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => {
+                  setData((prev) => ({
+                    ...prev,
+                    mcpServers: prev.mcpServers.filter((_, i) => i !== idx),
+                  }));
+                }}
+              >
+                <Trash2 className="size-4 text-destructive" />
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Name *</Label>
+                <Input
+                  value={server.name}
+                  onChange={(e) => {
+                    const updated = [...data.mcpServers];
+                    updated[idx] = { ...updated[idx], name: e.target.value };
+                    setData((prev) => ({ ...prev, mcpServers: updated }));
+                  }}
+                  placeholder="e.g. Jira"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>URL *</Label>
+                <Input
+                  value={server.url}
+                  onChange={(e) => {
+                    const updated = [...data.mcpServers];
+                    updated[idx] = { ...updated[idx], url: e.target.value };
+                    setData((prev) => ({ ...prev, mcpServers: updated }));
+                  }}
+                  placeholder="https://mcp.example.com/sse"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label>API Key</Label>
+              <Input
+                type="password"
+                value={server.apiKey}
+                onChange={(e) => {
+                  const updated = [...data.mcpServers];
+                  updated[idx] = { ...updated[idx], apiKey: e.target.value };
+                  setData((prev) => ({ ...prev, mcpServers: updated }));
+                }}
+                placeholder="Bearer token / API key"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Headers (JSON)</Label>
+              <Textarea
+                value={server.headers}
+                onChange={(e) => {
+                  const updated = [...data.mcpServers];
+                  updated[idx] = { ...updated[idx], headers: e.target.value };
+                  setData((prev) => ({ ...prev, mcpServers: updated }));
+                }}
+                placeholder='{"X-Custom-Header": "value"}'
+                rows={2}
+                className="font-mono text-xs"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Instructions</Label>
+              <Textarea
+                value={server.instructions}
+                onChange={(e) => {
+                  const updated = [...data.mcpServers];
+                  updated[idx] = { ...updated[idx], instructions: e.target.value };
+                  setData((prev) => ({ ...prev, mcpServers: updated }));
+                }}
+                placeholder="Additional instructions for the LLM when using this server's tools…"
+                rows={2}
+              />
+            </div>
+          </div>
+        ))}
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setData((prev) => ({
+              ...prev,
+              mcpServers: [...prev.mcpServers, { ...EMPTY_MCP_SERVER }],
+            }));
+          }}
+        >
+          <Plus className="mr-1 size-4" />
+          Add MCP Server
+        </Button>
+      </fieldset>
 
       {/* Active toggle */}
       <div className="flex items-center gap-3">

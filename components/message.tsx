@@ -17,7 +17,7 @@ import {
   ToolOutput,
 } from "./elements/tool";
 import { resolveAttachmentUrl } from "@/lib/supabase/storage";
-import { BookOpen, Database, FileTextIcon, Globe, ImageIcon } from "lucide-react";
+import { BookOpen, Database, FileTextIcon, Globe, ImageIcon, WrenchIcon } from "lucide-react";
 import { SparklesIcon } from "./icons";
 import { MessageActions } from "./message-actions";
 import { MessageEditor } from "./message-editor";
@@ -561,6 +561,38 @@ const PurePreviewMessage = ({
                             />
                           )
                         }
+                      />
+                    )}
+                  </ToolContent>
+                </Tool>
+              );
+            }
+
+            // Fallback for unknown / MCP tool types
+            if (type.startsWith("tool-")) {
+              const toolPart = part as unknown as {
+                toolCallId: string;
+                state: "input-streaming" | "input-available" | "output-available" | "output-error" | "output-denied" | "approval-requested" | "approval-responded";
+                output?: unknown;
+              };
+              const toolName = type.replace(/^tool-/, "");
+              const isRunning =
+                toolPart.state === "input-available" || toolPart.state === "input-streaming";
+
+              return (
+                <Tool defaultOpen={true} key={toolPart.toolCallId}>
+                  <ToolHeader state={toolPart.state} type={type as `tool-${string}`} title={toolName} />
+                  <ToolContent>
+                    {isRunning && (
+                      <div className="flex items-center gap-2 px-4 py-3 text-muted-foreground text-sm">
+                        <WrenchIcon className="size-4 animate-pulse" />
+                        <span>Running {toolName}…</span>
+                      </div>
+                    )}
+                    {toolPart.state === "output-available" && (
+                      <ToolOutput
+                        errorText={undefined}
+                        output={toolPart.output as React.ReactNode}
                       />
                     )}
                   </ToolContent>

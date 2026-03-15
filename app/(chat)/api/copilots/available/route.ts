@@ -25,6 +25,7 @@ export async function GET() {
       mcpServers: c.mcpServers
         ? c.mcpServers.map(({ apiKey: _apiKey, ...rest }) => rest)
         : c.mcpServers,
+      hasMcpTools: Array.isArray(c.mcpServers) && c.mcpServers.length > 0,
     }));
 
     return Response.json(sanitised, { status: 200 });
