@@ -89,7 +89,10 @@ export async function POST(request: Request) {
     const visibleModels = await getVisibleModels();
     const visibleModelIds = new Set(visibleModels.map((m) => m.id));
     if (!visibleModelIds.has(selectedChatModel)) {
-      return new ChatbotError("bad_request:api").toResponse();
+      return new ChatbotError(
+        "bad_request:api",
+        "The selected model is not currently enabled. Please choose a different model.",
+      ).toResponse();
     }
 
     // If a co-pilot is specified, load it and verify user access

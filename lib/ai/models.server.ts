@@ -1,5 +1,6 @@
 import "server-only";
 
+import { unstable_noStore as noStore } from "next/cache";
 import { getEnabledModels } from "@/lib/db/queries";
 import type { ChatModel } from "./models";
 import { getGatewayModels } from "./gateway";
@@ -9,8 +10,12 @@ import { getGatewayModels } from "./gateway";
  * Fetches the full model list from the AI Gateway, then filters
  * to only admin-enabled models. If no models are explicitly enabled
  * (empty table), all gateway models are returned as a safe default.
+ *
+ * Uses noStore() to prevent Next.js from caching this data, ensuring
+ * admin changes to enabled models are reflected immediately.
  */
 export async function getVisibleModels(): Promise<ChatModel[]> {
+  noStore();
   const [allModels, enabledRows] = await Promise.all([
     getGatewayModels(),
     getEnabledModels(),

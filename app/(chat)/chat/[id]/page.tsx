@@ -52,7 +52,13 @@ async function ChatPage({ params }: { params: Promise<{ id: string }> }) {
   const chatModelFromCookie = cookieStore.get("chat-model");
   const visibleModels = await getVisibleModels();
 
-  const selectedModel = chatModelFromCookie?.value ?? DEFAULT_CHAT_MODEL;
+  // Fall back to the first visible model if the cookie-stored model
+  // is no longer enabled by the admin.
+  const cookieModel = chatModelFromCookie?.value ?? DEFAULT_CHAT_MODEL;
+  const visibleIds = new Set(visibleModels.map((m) => m.id));
+  const selectedModel = visibleIds.has(cookieModel)
+    ? cookieModel
+    : visibleModels[0]?.id ?? DEFAULT_CHAT_MODEL;
 
   return (
     <>
