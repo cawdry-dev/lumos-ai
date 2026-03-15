@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
 import { auth } from "@/lib/supabase/auth";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import {
   getCopilotById,
   getKnowledgeDocuments,
@@ -117,8 +117,8 @@ export async function POST(
       );
     }
 
-    // Upload to Supabase Storage
-    const supabase = await createClient();
+    // Upload to Supabase Storage (service role client bypasses RLS)
+    const supabase = createServiceClient();
     const storagePath = `knowledge/${id}/${Date.now()}-${file.name}`;
     const { error: uploadError } = await supabase.storage
       .from("documents")
