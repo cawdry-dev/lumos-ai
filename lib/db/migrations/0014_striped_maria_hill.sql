@@ -1,0 +1,1 @@
+ALTER TABLE "Copilot" ADD COLUMN "modelId" varchar(255);

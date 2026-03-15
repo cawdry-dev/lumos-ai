@@ -91,7 +91,7 @@ export function AccentColourProvider({
 }) {
   const [accentColour, setAccentColourState] = useState(DEFAULT_ACCENT);
 
-  // Read from localStorage on mount
+  // Read from localStorage on mount, then try to fetch from profile
   useEffect(() => {
     const stored = localStorage.getItem(LS_KEY);
     if (stored && /^#[0-9a-fA-F]{6}$/.test(stored)) {
@@ -100,6 +100,20 @@ export function AccentColourProvider({
     } else {
       applyAccentVars(DEFAULT_ACCENT);
     }
+
+    // Fetch accent colour from profile for cross-device sync
+    fetch("/api/settings")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.accentColour && /^#[0-9a-fA-F]{6}$/.test(data.accentColour)) {
+          setAccentColourState(data.accentColour);
+          localStorage.setItem(LS_KEY, data.accentColour);
+          applyAccentVars(data.accentColour);
+        }
+      })
+      .catch(() => {
+        // Silently fall back to localStorage value
+      });
   }, []);
 
   // Re-apply vars when accent changes

@@ -3,17 +3,30 @@ import { z } from "zod";
 
 import { auth } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
+import { extractText, isSupportedMimeType } from "@/lib/rag/parse";
+
+// Allow longer execution for large file uploads + text extraction.
+export const maxDuration = 60;
+
+const ALLOWED_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "text/plain",
+  "text/markdown",
+  "application/pdf",
+];
+
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
 
 // Use Blob instead of File since File is not available in Node.js environment
 const FileSchema = z.object({
   file: z
     .instanceof(Blob)
-    .refine((file) => file.size <= 5 * 1024 * 1024, {
-      message: "File size should be less than 5MB",
+    .refine((file) => file.size <= MAX_FILE_SIZE, {
+      message: "File size should be less than 100MB",
     })
-    // Update the file type based on the kind of files you want to accept
-    .refine((file) => ["image/jpeg", "image/png"].includes(file.type), {
-      message: "File type should be JPEG or PNG",
+    .refine((file) => ALLOWED_MIME_TYPES.includes(file.type), {
+      message: "File type should be JPEG, PNG, TXT, Markdown, or PDF",
     }),
 });
 
@@ -70,12 +83,27 @@ export async function POST(request: Request) {
         );
       }
 
+      // For document types, extract text so the AI can read the content.
+      let extractedText: string | undefined;
+      if (isSupportedMimeType(file.type)) {
+        try {
+          extractedText = await extractText(
+            Buffer.from(fileBuffer),
+            file.type,
+          );
+        } catch (err) {
+          console.error("Text extraction failed:", err);
+          // Non-fatal — the file is still uploaded, just without extracted text.
+        }
+      }
+
       // Return the storage path with a scheme prefix so it can be
       // resolved to a signed URL at render time (private bucket).
       return NextResponse.json({
         url: `supabase:attachments/${storagePath}`,
         pathname: storagePath,
         contentType: file.type,
+        ...(extractedText !== undefined && { extractedText }),
       });
     } catch (_error) {
       return NextResponse.json({ error: "Upload failed" }, { status: 500 });

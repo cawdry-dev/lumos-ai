@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { ChatModel } from "@/lib/ai/models";
 
 /** Common emoji options for quick selection. */
 const EMOJI_OPTIONS = [
@@ -34,6 +35,7 @@ export type CopilotFormData = {
   sshPort: number;
   sshUsername: string;
   sshPrivateKey: string;
+  modelId: string;
   isActive: boolean;
 };
 
@@ -49,6 +51,7 @@ const DEFAULTS: CopilotFormData = {
   sshPort: 22,
   sshUsername: "",
   sshPrivateKey: "",
+  modelId: "",
   isActive: true,
 };
 
@@ -64,6 +67,30 @@ export function CopilotForm({
     ...initialData,
   });
   const [saving, setSaving] = useState(false);
+  const [availableModels, setAvailableModels] = useState<ChatModel[]>([]);
+
+  // Fetch available models for the model selector
+  useEffect(() => {
+    async function fetchModels() {
+      try {
+        const res = await fetch("/api/admin/models");
+        if (!res.ok) return;
+        const json = await res.json();
+        const models = json.models as ChatModel[];
+        const enabledIds = json.enabledModelIds as string[];
+        // If no models are explicitly enabled, all are available
+        if (enabledIds.length === 0) {
+          setAvailableModels(models);
+        } else {
+          const enabledSet = new Set(enabledIds);
+          setAvailableModels(models.filter((m) => enabledSet.has(m.id)));
+        }
+      } catch {
+        // Silently fail — the selector will just be empty
+      }
+    }
+    fetchModels();
+  }, []);
 
   const update = useCallback(
     <K extends keyof CopilotFormData>(key: K, value: CopilotFormData[K]) => {
@@ -97,6 +124,7 @@ export function CopilotForm({
           sshPort: data.type === "data" && data.sshHost ? data.sshPort : null,
           sshUsername: data.type === "data" && data.sshHost ? (data.sshUsername || null) : null,
           sshPrivateKey: data.type === "data" && data.sshHost ? (data.sshPrivateKey || null) : null,
+          modelId: data.modelId || null,
           isActive: data.isActive,
         }),
       });
@@ -197,6 +225,31 @@ export function CopilotForm({
         />
         <p className="text-xs text-muted-foreground">
           Custom persona instructions prepended to every conversation.
+        </p>
+      </div>
+
+      {/* Locked model */}
+      <div className="space-y-2">
+        <Label>Locked Model</Label>
+        <Select
+          value={data.modelId || "__none__"}
+          onValueChange={(v) => update("modelId", v === "__none__" ? "" : v)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="No locked model (user chooses)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">No locked model (user chooses)</SelectItem>
+            {availableModels.map((m) => (
+              <SelectItem key={m.id} value={m.id}>
+                {m.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          When set, users chatting with this co-pilot will always use the
+          selected model and cannot change it.
         </p>
       </div>
 

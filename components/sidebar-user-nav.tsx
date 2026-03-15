@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronUp } from "lucide-react";
+import { ChevronUp, Settings } from "lucide-react";
 import { AccentColourPicker } from "@/components/accent-colour-picker";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -72,6 +72,15 @@ export function SidebarUserNav({ user }: { user: UserNav }) {
               data-testid="user-nav-item-accent"
             >
               <AccentColourPicker />
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="cursor-pointer"
+              data-testid="user-nav-item-settings"
+              onSelect={() => router.push("/settings")}
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild data-testid="user-nav-item-auth">

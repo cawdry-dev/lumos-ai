@@ -3,8 +3,15 @@ import {
   getEnabledModels,
   enableModel,
   disableModel,
+  createModelPricing,
+  findPricingRuleByPattern,
 } from "@/lib/db/queries";
 import { getGatewayModels } from "@/lib/ai/gateway";
+import {
+  DEFAULT_MODEL_PRICING,
+  PROVIDER_WILDCARD_PRICING,
+  getProviderFromModelId,
+} from "@/lib/ai/pricing-defaults";
 
 /**
  * GET /api/admin/models
@@ -110,6 +117,7 @@ export async function PUT(request: Request) {
   try {
     if (enabled) {
       await enableModel(modelId, session.user.id);
+      await ensurePricingRuleExists(modelId);
     } else {
       await disableModel(modelId);
     }
@@ -122,5 +130,44 @@ export async function PUT(request: Request) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Ensures a pricing rule exists for the given model.
+ * If no exact-match rule exists, creates one from the defaults map.
+ * If no default exists, creates a provider-level wildcard rule as fallback.
+ */
+async function ensurePricingRuleExists(modelId: string): Promise<void> {
+  // Check for an exact pricing rule
+  const existingExact = await findPricingRuleByPattern(modelId);
+  if (existingExact) return;
+
+  // Try to create from the known defaults map
+  const defaultPricing = DEFAULT_MODEL_PRICING[modelId];
+  if (defaultPricing) {
+    await createModelPricing({
+      modelPattern: modelId,
+      promptPricePer1kTokens: defaultPricing.promptPricePer1kTokens,
+      completionPricePer1kTokens: defaultPricing.completionPricePer1kTokens,
+    });
+    return;
+  }
+
+  // Fall back to a provider-level wildcard rule (e.g. "openai/*")
+  const provider = getProviderFromModelId(modelId);
+  if (!provider) return;
+
+  const wildcardPattern = `${provider}/*`;
+  const existingWildcard = await findPricingRuleByPattern(wildcardPattern);
+  if (existingWildcard) return;
+
+  const wildcardPricing = PROVIDER_WILDCARD_PRICING[provider];
+  if (!wildcardPricing) return;
+
+  await createModelPricing({
+    modelPattern: wildcardPattern,
+    promptPricePer1kTokens: wildcardPricing.promptPricePer1kTokens,
+    completionPricePer1kTokens: wildcardPricing.completionPricePer1kTokens,
+  });
 }
 

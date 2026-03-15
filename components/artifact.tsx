@@ -78,6 +78,7 @@ function PureArtifact({
   enableImageGen,
   onToggleImageGen,
   supportsImageGen,
+  modelLocked,
 }: {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   chatId: string;
@@ -101,6 +102,7 @@ function PureArtifact({
   enableImageGen: boolean;
   onToggleImageGen: (enabled: boolean) => void;
   supportsImageGen: boolean;
+  modelLocked?: boolean;
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
 
@@ -357,6 +359,7 @@ function PureArtifact({
                     enableWebSearch={enableWebSearch}
                     input={input}
                     messages={messages}
+                    modelLocked={modelLocked}
                     onToggleImageGen={onToggleImageGen}
                     onToggleWebSearch={onToggleWebSearch}
                     selectedModelId={selectedModelId}

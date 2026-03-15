@@ -69,4 +69,6 @@ export type Attachment = {
   name: string;
   url: string;
   contentType: string;
+  /** Extracted text content for document attachments (txt, md, pdf). */
+  extractedText?: string;
 };

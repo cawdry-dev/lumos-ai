@@ -13,6 +13,8 @@ export type Session = {
     email: string;
     role: string;
     displayName: string | null;
+    ssoProvider: string | null;
+    accentColour: string | null;
   };
 };
 
@@ -35,20 +37,20 @@ export async function auth(): Promise<Session | null> {
   }
 
   if (!user) {
-    console.error("[auth] No user from supabase.auth.getUser()");
+    console.log("[auth] No user from supabase.auth.getUser()");
     return null;
   }
 
-  console.error("[auth] User found:", user.id, user.email);
+  console.log("[auth] User found:", user.id);
 
   // Fetch the profile from the User table; if no profile exists the user is not fully registered
   try {
     const profile = await getProfileById(user.id);
     if (!profile) {
-      console.error("[auth] No profile found for user:", user.id);
+      console.log("[auth] No profile found for user:", user.id);
       return null;
     }
-    console.error("[auth] Profile found, role:", profile.role);
+    console.log("[auth] Profile found, role:", profile.role);
 
     return {
       user: {
@@ -56,6 +58,8 @@ export async function auth(): Promise<Session | null> {
         email: user.email ?? "",
         role: profile.role,
         displayName: profile.displayName ?? null,
+        ssoProvider: profile.ssoProvider ?? null,
+        accentColour: profile.accentColour ?? null,
       },
     };
   } catch (error) {

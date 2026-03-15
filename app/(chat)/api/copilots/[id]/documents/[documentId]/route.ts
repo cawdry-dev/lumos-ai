@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
 import { auth } from "@/lib/supabase/auth";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import {
   getKnowledgeDocumentById,
   deleteKnowledgeDocument,
@@ -55,8 +55,8 @@ export async function DELETE(
       );
     }
 
-    // Remove the file from Supabase Storage
-    const supabase = await createClient();
+    // Remove the file from Supabase Storage (service role client bypasses RLS)
+    const supabase = createServiceClient();
     const { error: storageError } = await supabase.storage
       .from("documents")
       .remove([doc.storagePath]);
