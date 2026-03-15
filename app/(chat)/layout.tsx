@@ -37,11 +37,9 @@ async function SidebarWrapper({ children }: { children: React.ReactNode }) {
   const profile = user ? await getProfileById(user.id) : null;
 
   return (
-    <SidebarProvider defaultOpen={!isCollapsed}>
-      <div className="admin-shell h-screen flex overflow-hidden">
-        <AppSidebar user={user ?? undefined} userRole={profile?.role} />
-        <SidebarInset>{children}</SidebarInset>
-      </div>
+    <SidebarProvider defaultOpen={!isCollapsed} className="admin-shell h-screen overflow-hidden">
+      <AppSidebar user={user ?? undefined} userRole={profile?.role} />
+      <SidebarInset>{children}</SidebarInset>
     </SidebarProvider>
   );
 }
