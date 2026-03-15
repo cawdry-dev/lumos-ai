@@ -35,6 +35,7 @@ import {
   knowledgeChunk,
   knowledgeDocument,
   type KnowledgeDocument,
+  type McpServerConfig,
   message,
   modelPricing,
   type ModelPricing,
@@ -910,6 +911,7 @@ export async function createCopilot(values: {
   sshUsername: string | null;
   sshPrivateKey: string | null;
   modelId: string | null;
+  mcpServers: McpServerConfig[] | null;
   isActive: boolean;
   createdBy: string;
 }) {
@@ -944,6 +946,7 @@ export async function updateCopilot(
     sshUsername?: string | null;
     sshPrivateKey?: string | null;
     modelId?: string | null;
+    mcpServers?: McpServerConfig[] | null;
     isActive?: boolean;
   }
 ) {

@@ -71,6 +71,13 @@ export async function POST(request: Request) {
     sshUsername?: string | null;
     sshPrivateKey?: string | null;
     modelId?: string | null;
+    mcpServers?: Array<{
+      name: string;
+      url: string;
+      apiKey?: string;
+      headers?: Record<string, string>;
+      instructions?: string;
+    }> | null;
     isActive?: boolean;
   };
 
@@ -108,6 +115,7 @@ export async function POST(request: Request) {
       sshUsername: body.sshUsername ?? null,
       sshPrivateKey: body.sshPrivateKey ?? null,
       modelId: body.modelId ?? null,
+      mcpServers: body.mcpServers ?? null,
       isActive: body.isActive ?? true,
       createdBy: session.user.id,
     });

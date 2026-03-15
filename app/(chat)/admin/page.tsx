@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import Link from "next/link";
 import { auth } from "@/lib/supabase/auth";
 import { getAllUsers, getPendingInvitations } from "@/lib/db/queries";
@@ -15,6 +16,7 @@ import {
 import { BarChart3, Bot, ChevronRight, Coins, Cpu, Shield } from "lucide-react";
 
 export default async function AdminPage() {
+  await connection();
   // Auth is already checked in layout, but we need the session for the current user ID
   const session = (await auth())!;
   const [users, invitations] = await Promise.all([

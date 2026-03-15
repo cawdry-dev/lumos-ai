@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { connection } from "next/server";
 import { Suspense } from "react";
 
 import { Loader } from "@/components/ai-elements/loader";
@@ -20,6 +21,7 @@ export default function Page(props: { params: Promise<{ id: string }> }) {
 }
 
 async function ChatPage({ params }: { params: Promise<{ id: string }> }) {
+  await connection();
   const { id } = await params;
   const chat = await getChatById({ id });
 
