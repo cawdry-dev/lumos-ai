@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { Suspense } from "react";
+import { Loader } from "@/components/ai-elements/loader";
 import { Chat } from "@/components/chat";
 import { DataStreamHandler } from "@/components/data-stream-handler";
 import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
@@ -8,7 +9,7 @@ import { generateUUID } from "@/lib/utils";
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="flex h-dvh" />}>
+    <Suspense fallback={<div className="flex h-dvh items-center justify-center"><Loader size={24} /></div>}>
       <NewChatPage />
     </Suspense>
   );
