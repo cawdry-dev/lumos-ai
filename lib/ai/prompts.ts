@@ -96,12 +96,14 @@ export const systemPrompt = ({
   copilotSystemPrompt,
   isKnowledgeCopilot,
   isDataCopilot,
+  enabledTools,
 }: {
   selectedChatModel: string;
   requestHints: RequestHints;
   copilotSystemPrompt?: string | null;
   isKnowledgeCopilot?: boolean;
   isDataCopilot?: boolean;
+  enabledTools?: string[] | null;
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
 
@@ -115,13 +117,21 @@ export const systemPrompt = ({
   parts.push(regularPrompt);
   parts.push(requestPrompt);
 
+  const isReasoningModel =
+    selectedChatModel.includes("reasoning") ||
+    selectedChatModel.includes("thinking");
+
+  const hasCopilot = isKnowledgeCopilot || isDataCopilot;
+  const toolSet = new Set(enabledTools ?? []);
+
   // reasoning models don't need artifacts or capabilities prompts (they can't use tools)
-  if (
-    !selectedChatModel.includes("reasoning") &&
-    !selectedChatModel.includes("thinking")
-  ) {
-    parts.push(artifactsPrompt);
-    parts.push(capabilitiesPrompt);
+  if (!isReasoningModel) {
+    if (!hasCopilot || toolSet.has("documents")) {
+      parts.push(artifactsPrompt);
+    }
+    if (!hasCopilot || toolSet.has("webSearch") || toolSet.has("imageGen")) {
+      parts.push(capabilitiesPrompt);
+    }
   }
 
   // Add RAG instructions for knowledge co-pilots

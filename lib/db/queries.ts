@@ -912,6 +912,7 @@ export async function createCopilot(values: {
   sshPrivateKey: string | null;
   modelId: string | null;
   mcpServers: McpServerConfig[] | null;
+  enabledTools: string[] | null;
   isActive: boolean;
   createdBy: string;
 }) {
@@ -947,6 +948,7 @@ export async function updateCopilot(
     sshPrivateKey?: string | null;
     modelId?: string | null;
     mcpServers?: McpServerConfig[] | null;
+    enabledTools?: string[] | null;
     isActive?: boolean;
   }
 ) {
