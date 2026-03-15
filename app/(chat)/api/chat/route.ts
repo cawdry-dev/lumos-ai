@@ -214,11 +214,11 @@ export async function POST(request: Request) {
           "createDocument",
           "updateDocument",
           "requestSuggestions",
-          ...(webSearchEnabled ? ["perplexity_search" as ToolName] : []),
+          ...(webSearchEnabled && !isKnowledgeCopilot ? ["perplexity_search" as ToolName] : []),
         ];
 
-    // Image generation is only available for OpenAI GPT-5 models
-    if (!isReasoningModel && selectedChatModel.startsWith("openai/gpt-5") && imageGenEnabled) {
+    // Image generation is only available for OpenAI GPT-5 models (not for knowledge copilots)
+    if (!isReasoningModel && !isKnowledgeCopilot && selectedChatModel.startsWith("openai/gpt-5") && imageGenEnabled) {
       baseActiveTools.push("image_generation");
     }
 
