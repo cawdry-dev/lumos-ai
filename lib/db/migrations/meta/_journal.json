@@ -127,6 +127,13 @@
       "when": 1773593612432,
       "tag": "0017_rainy_cassandra_nova",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1773596578298,
+      "tag": "0018_fine_firedrake",
+      "breakpoints": true
     }
   ]
 }

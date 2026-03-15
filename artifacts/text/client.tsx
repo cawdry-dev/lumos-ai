@@ -44,8 +44,7 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
           content: draftArtifact.content + streamPart.data,
           isVisible:
             draftArtifact.status === "streaming" &&
-            draftArtifact.content.length > 400 &&
-            draftArtifact.content.length < 450
+            draftArtifact.content.length > 400
               ? true
               : draftArtifact.isVisible,
           status: "streaming",

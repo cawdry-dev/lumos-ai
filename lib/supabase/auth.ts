@@ -15,6 +15,7 @@ export type Session = {
     displayName: string | null;
     ssoProvider: string | null;
     accentColour: string | null;
+    ttsVoice: string | null;
   };
 };
 
@@ -60,6 +61,7 @@ export async function auth(): Promise<Session | null> {
         displayName: profile.displayName ?? null,
         ssoProvider: profile.ssoProvider ?? null,
         accentColour: profile.accentColour ?? null,
+        ttsVoice: profile.ttsVoice ?? null,
       },
     };
   } catch (error) {
