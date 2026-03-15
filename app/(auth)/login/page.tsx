@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 
 import { AuthForm } from "@/components/auth-form";
+import { SsoButtons } from "@/components/sso-buttons";
 import { SubmitButton } from "@/components/submit-button";
 import { toast } from "@/components/toast";
 import { type LoginActionState, login } from "../actions";
@@ -59,6 +60,18 @@ export default function Page() {
             Registration is by invitation only.
           </p>
         </AuthForm>
+
+        {/* SSO divider and buttons */}
+        <div className="flex flex-col gap-4 px-4 sm:px-16">
+          <div className="flex items-center gap-4">
+            <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-700" />
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              or continue with
+            </span>
+            <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-700" />
+          </div>
+          <SsoButtons />
+        </div>
       </div>
     </div>
   );

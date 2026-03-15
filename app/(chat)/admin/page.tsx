@@ -14,7 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Bot, ChevronRight } from "lucide-react";
+import { BarChart3, Bot, ChevronRight, Coins, Shield } from "lucide-react";
 
 export default async function AdminPage() {
   // Auth is already checked in layout, but we need the session for the current user ID
@@ -51,6 +51,7 @@ export default async function AdminPage() {
               email: u.email,
               role: u.role,
               displayName: u.displayName,
+              mfaExempt: u.mfaExempt,
             }))}
             currentUserId={session.user.id}
           />
@@ -89,6 +90,70 @@ export default async function AdminPage() {
             <Button variant="outline" asChild>
               <Link href="/admin/copilots">
                 <Bot className="mr-2 size-4" />
+                Manage
+                <ChevronRight className="ml-1 size-4" />
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* SSO settings section */}
+      <Card className="mb-8">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl">Single Sign-On</CardTitle>
+              <CardDescription>
+                Configure SSO providers (Azure AD, GitLab) and manage whitelisted domains
+                for automatic user provisioning.
+              </CardDescription>
+            </div>
+            <Button variant="outline" asChild>
+              <Link href="/admin/sso">
+                <Shield className="mr-2 size-4" />
+                Manage
+                <ChevronRight className="ml-1 size-4" />
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Usage dashboard section */}
+      <Card className="mb-8">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl">Usage &amp; Cost Limits</CardTitle>
+              <CardDescription>
+                View token usage, manage cost limits, and export usage reports.
+              </CardDescription>
+            </div>
+            <Button variant="outline" asChild>
+              <Link href="/admin/usage">
+                <BarChart3 className="mr-2 size-4" />
+                Dashboard
+                <ChevronRight className="ml-1 size-4" />
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Model pricing section */}
+      <Card className="mb-8">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl">Model Pricing</CardTitle>
+              <CardDescription>
+                Configure cost-per-token pricing for AI models used in cost calculations.
+              </CardDescription>
+            </div>
+            <Button variant="outline" asChild>
+              <Link href="/admin/pricing">
+                <Coins className="mr-2 size-4" />
                 Manage
                 <ChevronRight className="ml-1 size-4" />
               </Link>
