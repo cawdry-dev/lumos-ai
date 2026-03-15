@@ -45,12 +45,33 @@ export function createDocumentHandler<T extends ArtifactKind>(config: {
   return {
     kind: config.kind,
     onCreateDocument: async (args: CreateDocumentCallbackProps) => {
-      const draftContent = await config.onCreateDocument({
-        id: args.id,
-        title: args.title,
-        dataStream: args.dataStream,
-        session: args.session,
-      });
+      let draftContent: string;
+
+      try {
+        draftContent = await config.onCreateDocument({
+          id: args.id,
+          title: args.title,
+          dataStream: args.dataStream,
+          session: args.session,
+        });
+      } catch (error) {
+        console.error(
+          `[artifact] Failed to create ${config.kind} document:`,
+          error,
+        );
+
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+
+        draftContent = `[Error creating document: ${errorMessage}]`;
+
+        // Write error feedback to the data stream so the UI is not left empty
+        args.dataStream.write({
+          type: "data-textDelta" as const,
+          data: draftContent,
+          transient: true,
+        });
+      }
 
       if (args.session?.user?.id) {
         await saveDocument({
@@ -65,12 +86,33 @@ export function createDocumentHandler<T extends ArtifactKind>(config: {
       return;
     },
     onUpdateDocument: async (args: UpdateDocumentCallbackProps) => {
-      const draftContent = await config.onUpdateDocument({
-        document: args.document,
-        description: args.description,
-        dataStream: args.dataStream,
-        session: args.session,
-      });
+      let draftContent: string;
+
+      try {
+        draftContent = await config.onUpdateDocument({
+          document: args.document,
+          description: args.description,
+          dataStream: args.dataStream,
+          session: args.session,
+        });
+      } catch (error) {
+        console.error(
+          `[artifact] Failed to update ${config.kind} document:`,
+          error,
+        );
+
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+
+        draftContent = `[Error updating document: ${errorMessage}]`;
+
+        // Write error feedback to the data stream so the UI is not left empty
+        args.dataStream.write({
+          type: "data-textDelta" as const,
+          data: draftContent,
+          transient: true,
+        });
+      }
 
       if (args.session?.user?.id) {
         await saveDocument({
