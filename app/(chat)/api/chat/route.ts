@@ -27,6 +27,7 @@ import { getMcpTools, closeMcpClients, type MCPClientHandle } from "@/lib/ai/mcp
 import type { DbType, SshConfig } from "@/lib/rag/db-connector";
 import { isProductionEnvironment } from "@/lib/constants";
 import { resolveImageUrlsForModel } from "@/lib/supabase/storage.server";
+import { createServiceClient } from "@/lib/supabase/server";
 import {
   createStreamId,
   deleteChatById,
@@ -59,6 +60,62 @@ function getStreamContext() {
 }
 
 export { getStreamContext };
+
+/**
+ * Scans finished messages for image_generation tool outputs containing raw
+ * base64 data and uploads them to Supabase Storage ("generated-images" bucket).
+ * On success the base64 payload is replaced with a compact storage path
+ * reference, dramatically reducing the size of the persisted message JSON.
+ *
+ * Falls back gracefully — if the upload fails the original base64 is kept so
+ * the image is still renderable.
+ *
+ * NOTE: The "generated-images" bucket must be created manually in Supabase
+ * Dashboard as a **private** bucket before this will work.
+ */
+async function uploadGeneratedImages(
+  messages: Array<{ id: string; parts: any[] }>,
+  chatId: string,
+): Promise<void> {
+  const supabase = createServiceClient();
+
+  for (const msg of messages) {
+    for (const part of msg.parts) {
+      // AI SDK tool UI parts use type "tool-image_generation" with
+      // state "output-available" and output: { result: "<base64>" }
+      if (
+        part.type === "tool-image_generation" &&
+        part.state === "output-available" &&
+        part.output &&
+        typeof (part.output as { result?: string }).result === "string" &&
+        (part.output as { result: string }).result.length > 1000 // sanity: must look like base64
+      ) {
+        try {
+          const base64: string = (part.output as { result: string }).result;
+          const buffer = Buffer.from(base64, "base64");
+          const storagePath = `${chatId}/${msg.id}-${Date.now()}.png`;
+
+          const { error } = await supabase.storage
+            .from("generated-images")
+            .upload(storagePath, buffer, { contentType: "image/png" });
+
+          if (!error) {
+            // Replace base64 with a lightweight storage reference
+            part.output = {
+              storagePath: `generated-images/${storagePath}`,
+            };
+          } else {
+            console.error("Failed to upload generated image:", error);
+            // Keep base64 as fallback
+          }
+        } catch (err) {
+          console.error("Error uploading generated image:", err);
+          // Keep base64 as fallback
+        }
+      }
+    }
+  }
+}
 
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
@@ -364,6 +421,12 @@ export async function POST(request: Request) {
         if (mcpClients.length > 0) {
           await closeMcpClients(mcpClients);
         }
+
+        // Upload generated images to Supabase Storage and replace base64
+        // with storage path references to avoid bloating the database.
+        // NOTE: The "generated-images" bucket must be created manually in
+        // Supabase (private, not public).
+        await uploadGeneratedImages(finishedMessages, id);
 
         if (isToolApprovalFlow) {
           for (const finishedMsg of finishedMessages) {
