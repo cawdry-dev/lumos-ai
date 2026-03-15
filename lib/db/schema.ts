@@ -54,6 +54,8 @@ export const user = pgTable("User", {
   monthlyCostLimitCents: integer("monthlyCostLimitCents"),
   /** Which SSO provider the user signed up with, or null for email+password. */
   ssoProvider: varchar("ssoProvider", { length: 20 }),
+  /** User-chosen accent colour hex code, e.g. "#6366f1". */
+  accentColour: varchar("accentColour", { length: 7 }),
 }, (table) => ({
   invitedByRef: foreignKey({
     columns: [table.invitedBy],

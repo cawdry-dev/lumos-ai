@@ -13,6 +13,8 @@ export type Session = {
     email: string;
     role: string;
     displayName: string | null;
+    ssoProvider: string | null;
+    accentColour: string | null;
   };
 };
 
@@ -56,6 +58,8 @@ export async function auth(): Promise<Session | null> {
         email: user.email ?? "",
         role: profile.role,
         displayName: profile.displayName ?? null,
+        ssoProvider: profile.ssoProvider ?? null,
+        accentColour: profile.accentColour ?? null,
       },
     };
   } catch (error) {

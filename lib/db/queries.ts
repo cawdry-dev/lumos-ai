@@ -666,6 +666,30 @@ export async function getProfileById(
   }
 }
 
+/** Updates a user's profile (display name and accent colour). */
+export async function updateProfile(
+  id: string,
+  data: {
+    displayName?: string | null;
+    accentColour?: string | null;
+  },
+) {
+  try {
+    const [updated] = await db
+      .update(user)
+      .set(data)
+      .where(eq(user.id, id))
+      .returning();
+
+    return updated ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to update profile",
+    );
+  }
+}
+
 /** Creates a new invitation record in the database. */
 export async function createInvitation({
   email,
