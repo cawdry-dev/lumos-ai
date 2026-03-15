@@ -229,6 +229,13 @@ function PureMultimodalInput({
           name: attachment.name,
           mediaType: attachment.contentType,
         })),
+        // For document attachments, inject extracted text so the AI can read the content.
+        ...attachments
+          .filter((a) => a.extractedText)
+          .map((a) => ({
+            type: "text" as const,
+            text: `[Attached document: ${a.name}]\n${a.extractedText}`,
+          })),
         {
           type: "text",
           text: input,
@@ -268,12 +275,13 @@ function PureMultimodalInput({
 
       if (response.ok) {
         const data = await response.json();
-        const { url, pathname, contentType } = data;
+        const { url, pathname, contentType, extractedText } = data;
 
         return {
           url,
           name: pathname,
           contentType,
+          ...(extractedText !== undefined && { extractedText }),
         };
       }
       const { error } = await response.json();
@@ -383,6 +391,7 @@ function PureMultimodalInput({
       <BudgetIndicator />
 
       <input
+        accept="image/jpeg,image/png,.txt,.md,.pdf,text/plain,text/markdown,application/pdf"
         className="pointer-events-none fixed -top-4 -left-4 size-0.5 opacity-0"
         multiple
         onChange={handleFileChange}
