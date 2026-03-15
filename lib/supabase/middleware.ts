@@ -4,6 +4,10 @@ import { type NextRequest, NextResponse } from 'next/server'
 /**
  * Updates the Supabase auth session by refreshing expired tokens.
  * Should be called from Next.js middleware to keep sessions alive.
+ *
+ * Returns both the response (with refreshed cookies) and the
+ * Supabase client so callers can perform additional auth checks
+ * (e.g. MFA assurance level).
  */
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -47,6 +51,6 @@ export async function updateSession(request: NextRequest) {
   //   2. Copy the cookies: response.cookies.setAll(supabaseResponse.cookies.getAll())
   //   3. Update the supabaseResponse variable to point to the new response
 
-  return supabaseResponse
+  return { response: supabaseResponse, supabase }
 }
 
