@@ -374,7 +374,7 @@ export const tokenUsage = pgTable(
     /** The type of AI call that generated this usage. */
     usageType: varchar("usageType", {
       length: 20,
-      enum: ["chat", "embedding", "artifact", "title", "suggestion"],
+      enum: ["chat", "embedding", "artifact", "title", "suggestion", "whisper", "tts"],
     }).notNull(),
     createdAt: timestamp("createdAt").notNull(),
   },

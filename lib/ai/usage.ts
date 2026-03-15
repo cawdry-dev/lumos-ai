@@ -73,7 +73,7 @@ export async function recordUsage(params: {
   modelId: string;
   promptTokens: number;
   completionTokens: number;
-  usageType: "chat" | "embedding" | "artifact" | "title" | "suggestion";
+  usageType: "chat" | "embedding" | "artifact" | "title" | "suggestion" | "whisper" | "tts";
 }): Promise<void> {
   try {
     const pricingRules = await getActiveModelPricing();

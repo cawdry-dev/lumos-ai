@@ -1511,7 +1511,7 @@ export async function insertTokenUsage(data: {
   completionTokens: number;
   totalTokens: number;
   estimatedCostCents: number;
-  usageType: "chat" | "embedding" | "artifact" | "title" | "suggestion";
+  usageType: "chat" | "embedding" | "artifact" | "title" | "suggestion" | "whisper" | "tts";
 }) {
   try {
     const [row] = await db
