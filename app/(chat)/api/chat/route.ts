@@ -3,7 +3,6 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
-  gateway,
   generateId,
   stepCountIs,
   streamText,
@@ -23,6 +22,7 @@ import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { searchKnowledge } from "@/lib/ai/tools/search-knowledge";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { queryDatabase } from "@/lib/ai/tools/query-database";
+import { webSearch } from "@/lib/ai/tools/web-search";
 import type { DbType, SshConfig } from "@/lib/rag/db-connector";
 import { isProductionEnvironment } from "@/lib/constants";
 import { resolveImageUrlsForModel } from "@/lib/supabase/storage.server";
@@ -264,7 +264,7 @@ export async function POST(request: Request) {
             createDocument: createDocument({ session, dataStream }),
             updateDocument: updateDocument({ session, dataStream }),
             requestSuggestions: requestSuggestions({ session, dataStream }),
-            perplexity_search: gateway.tools.perplexitySearch() as any,
+            perplexity_search: webSearch,
             image_generation: openai.tools.imageGeneration({ model: "gpt-image-1", quality: "medium" }) as any,
             ...(isKnowledgeCopilot && activeCopilot
               ? {
@@ -287,6 +287,9 @@ export async function POST(request: Request) {
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,
             functionId: "stream-text",
+          },
+          onStepFinish: ({ finishReason, toolCalls, toolResults, text }) => {
+            console.log(`[chat] Step finished: finishReason=${finishReason} toolCalls=${toolCalls.length} toolResults=${toolResults.length} textLength=${text.length}`);
           },
         });
 
