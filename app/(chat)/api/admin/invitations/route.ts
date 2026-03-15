@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { email?: string; role?: string };
+  let body: { email?: string; role?: string; displayName?: string };
 
   try {
     body = await request.json();
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { email, role = "editor" } = body;
+  const { email, role = "editor", displayName } = body;
 
   if (!email || typeof email !== "string") {
     return Response.json(
@@ -60,12 +60,15 @@ export async function POST(request: Request) {
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
   try {
+    const trimmedDisplayName = displayName?.trim() || undefined;
+
     const invitation = await createInvitation({
       email,
       role,
       invitedBy: session.user.id,
       token,
       expiresAt,
+      displayName: trimmedDisplayName,
     });
 
     await sendInvitationEmail({
@@ -74,6 +77,7 @@ export async function POST(request: Request) {
       role,
       token,
       expiresAt,
+      displayName: trimmedDisplayName,
     });
 
     return Response.json({

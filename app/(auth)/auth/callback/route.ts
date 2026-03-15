@@ -75,8 +75,12 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}${next}`);
   }
 
-  // Determine the SSO provider from Supabase user metadata
+  // Determine the SSO provider and display name from Supabase user metadata
   const ssoProvider = (user.app_metadata?.provider as string) ?? null;
+  const ssoDisplayName =
+    (user.user_metadata?.full_name as string) ??
+    (user.user_metadata?.name as string) ??
+    null;
 
   // Check for a pending invitation first (invitations take precedence)
   const invitationToken = searchParams.get("invitation_token");
@@ -90,6 +94,7 @@ export async function GET(request: Request) {
         role: inv.role,
         invitedBy: inv.invitedBy,
         ssoProvider,
+        displayName: ssoDisplayName || inv.displayName || null,
       });
       await markInvitationAccepted(invitationToken);
       return NextResponse.redirect(`${origin}${next}`);
@@ -111,6 +116,7 @@ export async function GET(request: Request) {
         email: user.email,
         role: domainEntry.defaultRole,
         ssoProvider,
+        displayName: ssoDisplayName,
       });
       return NextResponse.redirect(`${origin}${next}`);
     }

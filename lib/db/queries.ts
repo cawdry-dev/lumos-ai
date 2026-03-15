@@ -81,6 +81,7 @@ export async function saveChat({
 
 export async function deleteChatById({ id }: { id: string }) {
   try {
+    await db.delete(tokenUsage).where(eq(tokenUsage.chatId, id));
     await db.delete(vote).where(eq(vote.chatId, id));
     await db.delete(message).where(eq(message.chatId, id));
     await db.delete(stream).where(eq(stream.chatId, id));
@@ -111,6 +112,7 @@ export async function deleteAllChatsByUserId({ userId }: { userId: string }) {
 
     const chatIds = userChats.map((c) => c.id);
 
+    await db.delete(tokenUsage).where(inArray(tokenUsage.chatId, chatIds));
     await db.delete(vote).where(inArray(vote.chatId, chatIds));
     await db.delete(message).where(inArray(message.chatId, chatIds));
     await db.delete(stream).where(inArray(stream.chatId, chatIds));
@@ -618,12 +620,14 @@ export async function createProfile({
   role,
   invitedBy,
   ssoProvider,
+  displayName,
 }: {
   id: string;
   email: string;
   role: string;
   invitedBy?: string | null;
   ssoProvider?: string | null;
+  displayName?: string | null;
 }) {
   try {
     return await db.insert(user).values({
@@ -633,6 +637,7 @@ export async function createProfile({
       invitedBy: invitedBy ?? undefined,
       invitedAt: invitedBy ? new Date() : undefined,
       ssoProvider: ssoProvider ?? undefined,
+      displayName: displayName ?? undefined,
     });
   } catch (_error) {
     throw new ChatbotError(
@@ -668,12 +673,14 @@ export async function createInvitation({
   invitedBy,
   token,
   expiresAt,
+  displayName,
 }: {
   email: string;
   role: string;
   invitedBy: string;
   token: string;
   expiresAt: Date;
+  displayName?: string | null;
 }) {
   try {
     const [created] = await db
@@ -685,6 +692,7 @@ export async function createInvitation({
         token,
         createdAt: new Date(),
         expiresAt,
+        displayName: displayName ?? undefined,
       })
       .returning();
 

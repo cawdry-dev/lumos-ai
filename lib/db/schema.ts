@@ -239,6 +239,8 @@ export const invitation = pgTable("Invitation", {
   email: varchar("email", { length: 255 }).notNull(),
   /** Role the invitee will receive upon acceptance. */
   role: varchar("role", { length: 20 }).notNull().default("editor"),
+  /** Optional display name pre-filled by the admin. */
+  displayName: text("displayName"),
   /** Unique token used to accept the invitation. */
   token: varchar("token", { length: 64 }).notNull().unique(),
   /** The admin who created this invitation. */

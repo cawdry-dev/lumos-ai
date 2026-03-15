@@ -29,6 +29,7 @@ export default async function AdminPage() {
     id: inv.id,
     email: inv.email,
     role: inv.role,
+    displayName: inv.displayName ?? null,
     expiresAt: inv.expiresAt.toISOString(),
   }));
 

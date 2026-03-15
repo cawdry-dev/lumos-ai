@@ -15,6 +15,14 @@ const authFormSchema = z.object({
   password: z.string().min(6),
 });
 
+/** Returns the display name from an invitation token, if available. */
+export async function getInvitationDisplayName(
+  token: string,
+): Promise<string | null> {
+  const inv = await getInvitationByToken(token);
+  return inv?.displayName ?? null;
+}
+
 export type LoginActionState = {
   status: "idle" | "in_progress" | "success" | "failed" | "invalid_data";
 };
@@ -77,6 +85,7 @@ export const register = async (
     });
 
     const token = formData.get("token") as string | null;
+    const formDisplayName = (formData.get("displayName") as string | null)?.trim() || null;
 
     const supabase = await createClient();
     const { data, error } = await supabase.auth.signUp({
@@ -105,6 +114,7 @@ export const register = async (
         id: userId,
         email: validatedData.email,
         role: "admin",
+        displayName: formDisplayName,
       });
     } else {
       if (!token) {
@@ -116,11 +126,15 @@ export const register = async (
         return { status: "invalid_token" };
       }
 
+      // Use the form value, falling back to the invitation's pre-filled name
+      const resolvedDisplayName = formDisplayName || inv.displayName || null;
+
       await createProfile({
         id: userId,
         email: validatedData.email,
         role: inv.role,
         invitedBy: inv.invitedBy,
+        displayName: resolvedDisplayName,
       });
 
       await markInvitationAccepted(token);
