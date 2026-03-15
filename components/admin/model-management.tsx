@@ -39,6 +39,16 @@ export function ModelManagement({ models }: { models: ChatModel[] }) {
   const [enabledIds, setEnabledIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
+  const [openProviders, setOpenProviders] = useState<Set<string>>(new Set());
+
+  const toggleProvider = (provider: string) => {
+    setOpenProviders((prev) => {
+      const next = new Set(prev);
+      if (next.has(provider)) next.delete(provider);
+      else next.add(provider);
+      return next;
+    });
+  };
 
   // Fetch current enabled models on mount
   useEffect(() => {
@@ -113,17 +123,6 @@ export function ModelManagement({ models }: { models: ChatModel[] }) {
       </p>
     );
   }
-
-  const [openProviders, setOpenProviders] = useState<Set<string>>(new Set());
-
-  const toggleProvider = (provider: string) => {
-    setOpenProviders((prev) => {
-      const next = new Set(prev);
-      if (next.has(provider)) next.delete(provider);
-      else next.add(provider);
-      return next;
-    });
-  };
 
   return (
     <div className="space-y-2">
