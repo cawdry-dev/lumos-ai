@@ -11,6 +11,7 @@ import {
   inArray,
   isNull,
   lt,
+  sql,
   type SQL,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -1117,6 +1118,52 @@ export async function getKnowledgeChunksByDocumentId(documentId: string) {
     throw new ChatbotError(
       "bad_request:database",
       "Failed to get knowledge chunks by document id"
+    );
+  }
+}
+
+/** Searches for the most relevant chunks using cosine similarity, scoped to a co-pilot. */
+export async function searchKnowledgeChunks(
+  copilotId: string,
+  embedding: number[],
+  limit = 10,
+) {
+  try {
+    const vectorLiteral = `[${embedding.join(",")}]`;
+
+    const rows = await db
+      .select({
+        id: knowledgeChunk.id,
+        documentId: knowledgeChunk.documentId,
+        content: knowledgeChunk.content,
+        metadata: knowledgeChunk.metadata,
+        tokenCount: knowledgeChunk.tokenCount,
+        chunkIndex: knowledgeChunk.chunkIndex,
+        similarity: sql<number>`1 - (${knowledgeChunk.embedding} <=> ${vectorLiteral}::vector)`.as(
+          "similarity",
+        ),
+      })
+      .from(knowledgeChunk)
+      .innerJoin(
+        knowledgeDocument,
+        eq(knowledgeChunk.documentId, knowledgeDocument.id),
+      )
+      .where(
+        and(
+          eq(knowledgeDocument.copilotId, copilotId),
+          eq(knowledgeDocument.status, "ready"),
+        ),
+      )
+      .orderBy(
+        sql`${knowledgeChunk.embedding} <=> ${vectorLiteral}::vector`,
+      )
+      .limit(limit);
+
+    return rows;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to search knowledge chunks",
     );
   }
 }
