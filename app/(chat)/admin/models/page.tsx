@@ -1,5 +1,4 @@
-export const dynamic = "force-dynamic";
-
+import { connection } from "next/server";
 import Link from "next/link";
 import { ModelManagement } from "@/components/admin/model-management";
 import { getGatewayModels } from "@/lib/ai/gateway";
@@ -14,6 +13,7 @@ import {
 import { ArrowLeft } from "lucide-react";
 
 export default async function AdminModelsPage() {
+  await connection();
   const gatewayModels = await getGatewayModels();
 
   return (
