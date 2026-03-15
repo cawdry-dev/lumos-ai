@@ -1,7 +1,11 @@
 import type { InferSelectModel } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  customType,
   foreignKey,
+  index,
+  integer,
   json,
   pgTable,
   primaryKey,
@@ -10,6 +14,23 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+
+/** Custom column type for pgvector `vector(N)` columns. */
+const vector = customType<{ data: number[]; driverData: string }>({
+  dataType(config) {
+    const dimensions = (config as { dimensions?: number })?.dimensions ?? 1536;
+    return `vector(${dimensions})`;
+  },
+  fromDriver(value: string): number[] {
+    return value
+      .slice(1, -1)
+      .split(",")
+      .map(Number);
+  },
+  toDriver(value: number[]): string {
+    return `[${value.join(",")}]`;
+  },
+});
 
 export const user = pgTable("User", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
@@ -33,17 +54,63 @@ export const user = pgTable("User", {
 
 export type User = InferSelectModel<typeof user>;
 
-export const chat = pgTable("Chat", {
+// ---------------------------------------------------------------------------
+// Co-pilot & Knowledge tables
+// ---------------------------------------------------------------------------
+
+/** A co-pilot persona that users can chat with. */
+export const copilot = pgTable("Copilot", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
-  createdAt: timestamp("createdAt").notNull(),
-  title: text("title").notNull(),
-  userId: uuid("userId")
+  /** Display name, e.g. "HR Assistant". */
+  name: varchar("name", { length: 100 }).notNull(),
+  /** Short blurb shown to users. */
+  description: text("description").notNull(),
+  /** Uploaded avatar image path. */
+  avatarUrl: text("avatarUrl"),
+  /** Fallback emoji if no avatar is set. */
+  emoji: varchar("emoji", { length: 10 }),
+  /** Custom persona instructions for the LLM. */
+  systemPrompt: text("systemPrompt"),
+  /** Co-pilot type — `knowledge` (RAG) or `data` (SQL). */
+  type: varchar("type", { length: 20, enum: ["knowledge", "data"] })
+    .notNull()
+    .default("knowledge"),
+  /** Encrypted Postgres connection string for data co-pilots. */
+  dbConnectionString: text("dbConnectionString"),
+  /** Whether this co-pilot is available to users. */
+  isActive: boolean("isActive").notNull().default(true),
+  /** The user who created this co-pilot. */
+  createdBy: uuid("createdBy")
     .notNull()
     .references(() => user.id),
-  visibility: varchar("visibility", { enum: ["public", "private"] })
-    .notNull()
-    .default("private"),
+  createdAt: timestamp("createdAt").notNull(),
+  updatedAt: timestamp("updatedAt").notNull(),
 });
+
+export type Copilot = InferSelectModel<typeof copilot>;
+
+export const chat = pgTable(
+  "Chat",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    createdAt: timestamp("createdAt").notNull(),
+    title: text("title").notNull(),
+    userId: uuid("userId")
+      .notNull()
+      .references(() => user.id),
+    /** Optional co-pilot that owns this chat session. */
+    copilotId: uuid("copilotId"),
+    visibility: varchar("visibility", { enum: ["public", "private"] })
+      .notNull()
+      .default("private"),
+  },
+  (table) => ({
+    copilotRef: foreignKey({
+      columns: [table.copilotId],
+      foreignColumns: [copilot.id],
+    }),
+  })
+);
 
 export type Chat = InferSelectModel<typeof chat>;
 
@@ -180,3 +247,84 @@ export const enabledModel = pgTable("EnabledModel", {
 });
 
 export type EnabledModel = InferSelectModel<typeof enabledModel>;
+
+/** Join table granting individual users access to a co-pilot. */
+export const copilotAccess = pgTable(
+  "CopilotAccess",
+  {
+    copilotId: uuid("copilotId")
+      .notNull()
+      .references(() => copilot.id),
+    userId: uuid("userId")
+      .notNull()
+      .references(() => user.id),
+    /** The admin who granted access. */
+    grantedBy: uuid("grantedBy")
+      .notNull()
+      .references(() => user.id),
+    grantedAt: timestamp("grantedAt").notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.copilotId, table.userId] }),
+  })
+);
+
+export type CopilotAccess = InferSelectModel<typeof copilotAccess>;
+
+/** An uploaded document attached to a co-pilot's knowledge base. */
+export const knowledgeDocument = pgTable("KnowledgeDocument", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  copilotId: uuid("copilotId")
+    .notNull()
+    .references(() => copilot.id),
+  title: text("title").notNull(),
+  fileName: text("fileName").notNull(),
+  mimeType: varchar("mimeType", { length: 100 }).notNull(),
+  /** Supabase Storage path for the original file. */
+  storagePath: text("storagePath").notNull(),
+  /** Processing status: `processing`, `ready`, or `error`. */
+  status: varchar("status", {
+    length: 20,
+    enum: ["processing", "ready", "error"],
+  })
+    .notNull()
+    .default("processing"),
+  /** Number of chunks generated from this document. */
+  chunkCount: integer("chunkCount").notNull().default(0),
+  /** The user who uploaded this document. */
+  uploadedBy: uuid("uploadedBy")
+    .notNull()
+    .references(() => user.id),
+  createdAt: timestamp("createdAt").notNull(),
+  updatedAt: timestamp("updatedAt").notNull(),
+});
+
+export type KnowledgeDocument = InferSelectModel<typeof knowledgeDocument>;
+
+/** An individual text chunk with its embedding vector. */
+export const knowledgeChunk = pgTable(
+  "KnowledgeChunk",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    documentId: uuid("documentId")
+      .notNull()
+      .references(() => knowledgeDocument.id),
+    content: text("content").notNull(),
+    /** pgvector embedding (1536 dimensions for OpenAI ada-002). */
+    embedding: vector("embedding", { dimensions: 1536 }).notNull(),
+    /** Arbitrary metadata — page number, heading, etc. */
+    metadata: json("metadata"),
+    tokenCount: integer("tokenCount").notNull(),
+    chunkIndex: integer("chunkIndex").notNull(),
+    createdAt: timestamp("createdAt").notNull(),
+  },
+  (table) => ({
+    /** HNSW index for fast cosine-similarity searches. */
+    embeddingIdx: index("knowledgeChunk_embedding_idx").using(
+      "hnsw",
+      sql`${table.embedding} vector_cosine_ops`,
+    ),
+  })
+);
+
+export type KnowledgeChunk = InferSelectModel<typeof knowledgeChunk>;
