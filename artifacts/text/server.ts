@@ -1,14 +1,15 @@
 import { smoothStream, streamText } from "ai";
 import { updateDocumentPrompt } from "@/lib/ai/prompts";
 import { getArtifactModel } from "@/lib/ai/providers";
+import { recordUsage } from "@/lib/ai/usage";
 import { createDocumentHandler } from "@/lib/artifacts/server";
 
 export const textDocumentHandler = createDocumentHandler<"text">({
   kind: "text",
-  onCreateDocument: async ({ title, dataStream }) => {
+  onCreateDocument: async ({ title, dataStream, session }) => {
     let draftContent = "";
 
-    const { fullStream } = streamText({
+    const { fullStream, usage } = streamText({
       model: getArtifactModel(),
       system:
         "Write about the given topic. Markdown is supported. Use headings wherever appropriate.",
@@ -32,12 +33,25 @@ export const textDocumentHandler = createDocumentHandler<"text">({
       }
     }
 
+    // Record artifact creation token usage
+    if (session.user?.id) {
+      usage.then((u) => {
+        recordUsage({
+          userId: session.user.id,
+          modelId: "anthropic/claude-haiku-4.5",
+          promptTokens: u.inputTokens ?? 0,
+          completionTokens: u.outputTokens ?? 0,
+          usageType: "artifact",
+        });
+      });
+    }
+
     return draftContent;
   },
-  onUpdateDocument: async ({ document, description, dataStream }) => {
+  onUpdateDocument: async ({ document, description, dataStream, session }) => {
     let draftContent = "";
 
-    const { fullStream } = streamText({
+    const { fullStream, usage } = streamText({
       model: getArtifactModel(),
       system: updateDocumentPrompt(document.content, "text"),
       experimental_transform: smoothStream({ chunking: "word" }),
@@ -66,6 +80,19 @@ export const textDocumentHandler = createDocumentHandler<"text">({
           transient: true,
         });
       }
+    }
+
+    // Record artifact update token usage
+    if (session.user?.id) {
+      usage.then((u) => {
+        recordUsage({
+          userId: session.user.id,
+          modelId: "anthropic/claude-haiku-4.5",
+          promptTokens: u.inputTokens ?? 0,
+          completionTokens: u.outputTokens ?? 0,
+          usageType: "artifact",
+        });
+      });
     }
 
     return draftContent;

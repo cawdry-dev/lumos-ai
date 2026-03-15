@@ -11,6 +11,7 @@ import {
   inArray,
   isNull,
   lt,
+  sql,
   type SQL,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -20,16 +21,28 @@ import type { VisibilityType } from "@/components/visibility-selector";
 import { ChatbotError } from "../errors";
 import { generateUUID } from "../utils";
 import {
+  allowedDomain,
+  type AllowedDomain,
   type Chat,
   chat,
+  copilot,
+  type Copilot,
+  copilotAccess,
   type DBMessage,
   document,
   enabledModel,
   invitation,
+  knowledgeChunk,
+  knowledgeDocument,
+  type KnowledgeDocument,
   message,
+  modelPricing,
+  type ModelPricing,
   type Suggestion,
   stream,
   suggestion,
+  tokenUsage,
+  type TokenUsage,
   type User,
   user,
   vote,
@@ -44,11 +57,13 @@ export async function saveChat({
   userId,
   title,
   visibility,
+  copilotId,
 }: {
   id: string;
   userId: string;
   title: string;
   visibility: VisibilityType;
+  copilotId?: string | null;
 }) {
   try {
     return await db.insert(chat).values({
@@ -57,6 +72,7 @@ export async function saveChat({
       userId,
       title,
       visibility,
+      ...(copilotId ? { copilotId } : {}),
     });
   } catch (_error) {
     throw new ChatbotError("bad_request:database", "Failed to save chat");
@@ -113,6 +129,12 @@ export async function deleteAllChatsByUserId({ userId }: { userId: string }) {
   }
 }
 
+/** A chat row enriched with its co-pilot's display info. */
+export type ChatWithCopilot = Chat & {
+  copilotName: string | null;
+  copilotEmoji: string | null;
+};
+
 export async function getChatsByUserId({
   id,
   limit,
@@ -129,8 +151,18 @@ export async function getChatsByUserId({
 
     const query = (whereCondition?: SQL<any>) =>
       db
-        .select()
+        .select({
+          id: chat.id,
+          createdAt: chat.createdAt,
+          title: chat.title,
+          userId: chat.userId,
+          copilotId: chat.copilotId,
+          visibility: chat.visibility,
+          copilotName: copilot.name,
+          copilotEmoji: copilot.emoji,
+        })
         .from(chat)
+        .leftJoin(copilot, eq(chat.copilotId, copilot.id))
         .where(
           whereCondition
             ? and(whereCondition, eq(chat.userId, id))
@@ -139,7 +171,7 @@ export async function getChatsByUserId({
         .orderBy(desc(chat.createdAt))
         .limit(extendedLimit);
 
-    let filteredChats: Chat[] = [];
+    let filteredChats: ChatWithCopilot[] = [];
 
     if (startingAfter) {
       const [selectedChat] = await db
@@ -585,11 +617,13 @@ export async function createProfile({
   email,
   role,
   invitedBy,
+  ssoProvider,
 }: {
   id: string;
   email: string;
   role: string;
   invitedBy?: string | null;
+  ssoProvider?: string | null;
 }) {
   try {
     return await db.insert(user).values({
@@ -598,6 +632,7 @@ export async function createProfile({
       role,
       invitedBy: invitedBy ?? undefined,
       invitedAt: invitedBy ? new Date() : undefined,
+      ssoProvider: ssoProvider ?? undefined,
     });
   } catch (_error) {
     throw new ChatbotError(
@@ -802,6 +837,844 @@ export async function revokeInvitation(id: string) {
     throw new ChatbotError(
       "bad_request:database",
       "Failed to revoke invitation"
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Co-pilot queries
+// ---------------------------------------------------------------------------
+
+/** Returns all co-pilots ordered by name. */
+export async function getCopilots() {
+  try {
+    return await db.select().from(copilot).orderBy(asc(copilot.name));
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to get co-pilots");
+  }
+}
+
+/** Returns a single co-pilot by ID. */
+export async function getCopilotById(id: string) {
+  try {
+    const [row] = await db.select().from(copilot).where(eq(copilot.id, id));
+    return row ?? null;
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to get co-pilot");
+  }
+}
+
+/** Creates a new co-pilot and returns it. */
+export async function createCopilot(values: {
+  name: string;
+  description: string;
+  emoji: string | null;
+  type: "knowledge" | "data";
+  systemPrompt: string | null;
+  dbConnectionString: string | null;
+  dbType: string | null;
+  sshHost: string | null;
+  sshPort: number | null;
+  sshUsername: string | null;
+  sshPrivateKey: string | null;
+  isActive: boolean;
+  createdBy: string;
+}) {
+  try {
+    const [created] = await db
+      .insert(copilot)
+      .values({
+        ...values,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return created;
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to create co-pilot");
+  }
+}
+
+/** Updates a co-pilot by ID and returns it. */
+export async function updateCopilot(
+  id: string,
+  values: {
+    name?: string;
+    description?: string;
+    emoji?: string | null;
+    type?: "knowledge" | "data";
+    systemPrompt?: string | null;
+    dbConnectionString?: string | null;
+    dbType?: string | null;
+    sshHost?: string | null;
+    sshPort?: number | null;
+    sshUsername?: string | null;
+    sshPrivateKey?: string | null;
+    isActive?: boolean;
+  }
+) {
+  try {
+    const [updated] = await db
+      .update(copilot)
+      .set({ ...values, updatedAt: new Date() })
+      .where(eq(copilot.id, id))
+      .returning();
+    return updated ?? null;
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to update co-pilot");
+  }
+}
+
+/** Deletes a co-pilot (and cascading access rows) by ID. */
+export async function deleteCopilot(id: string) {
+  try {
+    await db.delete(copilotAccess).where(eq(copilotAccess.copilotId, id));
+    const [deleted] = await db
+      .delete(copilot)
+      .where(eq(copilot.id, id))
+      .returning();
+    return deleted ?? null;
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to delete co-pilot");
+  }
+}
+
+/**
+ * Returns all active co-pilots that a user has access to.
+ *
+ * A co-pilot is accessible when either:
+ * - It has no rows in `copilotAccess` (open to everyone), OR
+ * - The user has an explicit `copilotAccess` row.
+ */
+export async function getAvailableCopilots(userId: string): Promise<Copilot[]> {
+  try {
+    // Sub-query: co-pilot IDs that have at least one access row
+    const restricted = db
+      .select({ copilotId: copilotAccess.copilotId })
+      .from(copilotAccess)
+      .groupBy(copilotAccess.copilotId);
+
+    // Sub-query: co-pilot IDs the user is explicitly granted
+    const granted = db
+      .select({ copilotId: copilotAccess.copilotId })
+      .from(copilotAccess)
+      .where(eq(copilotAccess.userId, userId));
+
+    const rows = await db
+      .select()
+      .from(copilot)
+      .where(
+        and(
+          eq(copilot.isActive, true),
+          sql`(${copilot.id} NOT IN (${restricted}) OR ${copilot.id} IN (${granted}))`,
+        ),
+      )
+      .orderBy(asc(copilot.name));
+
+    return rows;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get available co-pilots",
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Co-pilot access queries
+// ---------------------------------------------------------------------------
+
+/** Returns users who have explicit access to a co-pilot. */
+export async function getCopilotAccessUsers(copilotId: string) {
+  try {
+    return await db
+      .select({
+        userId: copilotAccess.userId,
+        grantedAt: copilotAccess.grantedAt,
+        email: user.email,
+        displayName: user.displayName,
+      })
+      .from(copilotAccess)
+      .innerJoin(user, eq(copilotAccess.userId, user.id))
+      .where(eq(copilotAccess.copilotId, copilotId))
+      .orderBy(asc(user.email));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get co-pilot access users"
+    );
+  }
+}
+
+/** Grants a user access to a co-pilot. */
+export async function grantCopilotAccess(
+  copilotId: string,
+  userId: string,
+  grantedBy: string
+) {
+  try {
+    const [row] = await db
+      .insert(copilotAccess)
+      .values({
+        copilotId,
+        userId,
+        grantedBy,
+        grantedAt: new Date(),
+      })
+      .onConflictDoNothing()
+      .returning();
+    return row;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to grant co-pilot access"
+    );
+  }
+}
+
+/** Revokes a user's access to a co-pilot. */
+export async function revokeCopilotAccess(copilotId: string, userId: string) {
+  try {
+    return await db
+      .delete(copilotAccess)
+      .where(
+        and(
+          eq(copilotAccess.copilotId, copilotId),
+          eq(copilotAccess.userId, userId)
+        )
+      );
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to revoke co-pilot access"
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Knowledge Document helpers
+// ---------------------------------------------------------------------------
+
+/** Returns all documents belonging to a co-pilot. */
+export async function getKnowledgeDocuments(copilotId: string): Promise<KnowledgeDocument[]> {
+  try {
+    return await db
+      .select()
+      .from(knowledgeDocument)
+      .where(eq(knowledgeDocument.copilotId, copilotId))
+      .orderBy(desc(knowledgeDocument.createdAt));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get knowledge documents"
+    );
+  }
+}
+
+/** Returns a single knowledge document by ID. */
+export async function getKnowledgeDocumentById(id: string): Promise<KnowledgeDocument | null> {
+  try {
+    const [doc] = await db
+      .select()
+      .from(knowledgeDocument)
+      .where(eq(knowledgeDocument.id, id));
+    return doc ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get knowledge document by id"
+    );
+  }
+}
+
+/** Creates a new knowledge document record. */
+export async function createKnowledgeDocument(values: {
+  copilotId: string;
+  title: string;
+  fileName: string;
+  mimeType: string;
+  storagePath: string;
+  uploadedBy: string;
+}) {
+  try {
+    const now = new Date();
+    const [created] = await db
+      .insert(knowledgeDocument)
+      .values({
+        ...values,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+    return created;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to create knowledge document"
+    );
+  }
+}
+
+/** Updates a knowledge document's status and chunk count. */
+export async function updateKnowledgeDocumentStatus(
+  id: string,
+  status: "processing" | "ready" | "error",
+  chunkCount?: number
+) {
+  try {
+    const [updated] = await db
+      .update(knowledgeDocument)
+      .set({
+        status,
+        ...(chunkCount !== undefined ? { chunkCount } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(knowledgeDocument.id, id))
+      .returning();
+    return updated;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to update knowledge document status"
+    );
+  }
+}
+
+/** Deletes a knowledge document and its chunks. */
+export async function deleteKnowledgeDocument(id: string) {
+  try {
+    await db.delete(knowledgeChunk).where(eq(knowledgeChunk.documentId, id));
+    const [deleted] = await db
+      .delete(knowledgeDocument)
+      .where(eq(knowledgeDocument.id, id))
+      .returning();
+    return deleted;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to delete knowledge document"
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Knowledge Chunk helpers
+// ---------------------------------------------------------------------------
+
+/** Inserts chunks in bulk for a given document. */
+export async function insertKnowledgeChunks(
+  chunks: {
+    documentId: string;
+    content: string;
+    embedding: number[];
+    metadata?: Record<string, unknown>;
+    tokenCount: number;
+    chunkIndex: number;
+  }[]
+) {
+  try {
+    const now = new Date();
+    return await db.insert(knowledgeChunk).values(
+      chunks.map((c) => ({ ...c, createdAt: now }))
+    );
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to insert knowledge chunks"
+    );
+  }
+}
+
+/** Returns all chunks for a given document, ordered by index. */
+export async function getKnowledgeChunksByDocumentId(documentId: string) {
+  try {
+    return await db
+      .select()
+      .from(knowledgeChunk)
+      .where(eq(knowledgeChunk.documentId, documentId))
+      .orderBy(asc(knowledgeChunk.chunkIndex));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get knowledge chunks by document id"
+    );
+  }
+}
+
+/** Searches for the most relevant chunks using cosine similarity, scoped to a co-pilot. */
+export async function searchKnowledgeChunks(
+  copilotId: string,
+  embedding: number[],
+  limit = 10,
+) {
+  try {
+    const vectorLiteral = `[${embedding.join(",")}]`;
+
+    const rows = await db
+      .select({
+        id: knowledgeChunk.id,
+        documentId: knowledgeChunk.documentId,
+        content: knowledgeChunk.content,
+        metadata: knowledgeChunk.metadata,
+        tokenCount: knowledgeChunk.tokenCount,
+        chunkIndex: knowledgeChunk.chunkIndex,
+        similarity: sql<number>`1 - (${knowledgeChunk.embedding} <=> ${vectorLiteral}::vector)`.as(
+          "similarity",
+        ),
+      })
+      .from(knowledgeChunk)
+      .innerJoin(
+        knowledgeDocument,
+        eq(knowledgeChunk.documentId, knowledgeDocument.id),
+      )
+      .where(
+        and(
+          eq(knowledgeDocument.copilotId, copilotId),
+          eq(knowledgeDocument.status, "ready"),
+        ),
+      )
+      .orderBy(
+        sql`${knowledgeChunk.embedding} <=> ${vectorLiteral}::vector`,
+      )
+      .limit(limit);
+
+    return rows;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to search knowledge chunks",
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Admin usage & pricing queries
+// ---------------------------------------------------------------------------
+
+/** Returns aggregated usage stats for the admin dashboard. */
+export async function getUsageStats({
+  from,
+  to,
+}: {
+  from: Date;
+  to: Date;
+}) {
+  try {
+    const rows = await db
+      .select({
+        userId: tokenUsage.userId,
+        email: user.email,
+        displayName: user.displayName,
+        modelId: tokenUsage.modelId,
+        copilotId: tokenUsage.copilotId,
+        copilotName: copilot.name,
+        usageType: tokenUsage.usageType,
+        totalPromptTokens: sql<number>`COALESCE(SUM(${tokenUsage.promptTokens}), 0)::int`,
+        totalCompletionTokens: sql<number>`COALESCE(SUM(${tokenUsage.completionTokens}), 0)::int`,
+        totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+        date: sql<string>`DATE(${tokenUsage.createdAt})`.as("date"),
+      })
+      .from(tokenUsage)
+      .innerJoin(user, eq(tokenUsage.userId, user.id))
+      .leftJoin(copilot, eq(tokenUsage.copilotId, copilot.id))
+      .where(
+        and(
+          gte(tokenUsage.createdAt, from),
+          lt(tokenUsage.createdAt, to),
+        ),
+      )
+      .groupBy(
+        tokenUsage.userId,
+        user.email,
+        user.displayName,
+        tokenUsage.modelId,
+        tokenUsage.copilotId,
+        copilot.name,
+        tokenUsage.usageType,
+        sql`DATE(${tokenUsage.createdAt})`,
+      );
+
+    return rows;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get usage stats",
+    );
+  }
+}
+
+/** Returns the user's total cost for a given period. */
+export async function getUserCostForPeriod({
+  userId: uid,
+  from,
+  to,
+}: {
+  userId: string;
+  from: Date;
+  to: Date;
+}) {
+  try {
+    const [row] = await db
+      .select({
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+        totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
+      })
+      .from(tokenUsage)
+      .where(
+        and(
+          eq(tokenUsage.userId, uid),
+          gte(tokenUsage.createdAt, from),
+          lt(tokenUsage.createdAt, to),
+        ),
+      );
+
+    return row ?? { totalCostCents: 0, totalTokens: 0 };
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get user cost for period",
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Model pricing queries
+// ---------------------------------------------------------------------------
+
+/** Returns all model pricing rules. */
+export async function getAllModelPricing() {
+  try {
+    return await db.select().from(modelPricing).orderBy(asc(modelPricing.modelPattern));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get model pricing",
+    );
+  }
+}
+
+/** Creates a new model pricing rule. */
+export async function createModelPricing(data: {
+  modelPattern: string;
+  promptPricePer1kTokens: string;
+  completionPricePer1kTokens: string;
+}) {
+  try {
+    const [row] = await db
+      .insert(modelPricing)
+      .values({
+        modelPattern: data.modelPattern,
+        promptPricePer1kTokens: data.promptPricePer1kTokens,
+        completionPricePer1kTokens: data.completionPricePer1kTokens,
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    return row;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to create model pricing",
+    );
+  }
+}
+
+/** Updates an existing model pricing rule. */
+export async function updateModelPricing(
+  id: string,
+  data: {
+    modelPattern?: string;
+    promptPricePer1kTokens?: string;
+    completionPricePer1kTokens?: string;
+    isActive?: boolean;
+  },
+) {
+  try {
+    const [row] = await db
+      .update(modelPricing)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(modelPricing.id, id))
+      .returning();
+
+    return row;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to update model pricing",
+    );
+  }
+}
+
+/** Deletes a model pricing rule. */
+export async function deleteModelPricing(id: string) {
+  try {
+    await db.delete(modelPricing).where(eq(modelPricing.id, id));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to delete model pricing",
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// User cost limit queries
+// ---------------------------------------------------------------------------
+
+/** Gets a user's cost limits (per-user overrides). */
+export async function getUserCostLimits(uid: string) {
+  try {
+    const [row] = await db
+      .select({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        dailyCostLimitCents: user.dailyCostLimitCents,
+        monthlyCostLimitCents: user.monthlyCostLimitCents,
+      })
+      .from(user)
+      .where(eq(user.id, uid));
+
+    return row ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get user cost limits",
+    );
+  }
+}
+
+/** Sets per-user cost limit overrides. Pass null to clear (use role default). */
+export async function setUserCostLimits(
+  uid: string,
+  limits: {
+    dailyCostLimitCents: number | null;
+    monthlyCostLimitCents: number | null;
+  },
+) {
+  try {
+    const [row] = await db
+      .update(user)
+      .set({
+        dailyCostLimitCents: limits.dailyCostLimitCents,
+        monthlyCostLimitCents: limits.monthlyCostLimitCents,
+      })
+      .where(eq(user.id, uid))
+      .returning();
+
+    return row;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to set user cost limits",
+    );
+  }
+}
+
+/** Returns all users with their cost limits for the admin user list. */
+export async function getAllUsersWithLimits() {
+  try {
+    return await db
+      .select({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        displayName: user.displayName,
+        dailyCostLimitCents: user.dailyCostLimitCents,
+        monthlyCostLimitCents: user.monthlyCostLimitCents,
+      })
+      .from(user)
+      .orderBy(asc(user.email));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get users with limits",
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Token usage insert helper
+// ---------------------------------------------------------------------------
+
+/** Inserts a single token usage record. */
+export async function insertTokenUsage(data: {
+  userId: string;
+  chatId?: string | null;
+  copilotId?: string | null;
+  modelId: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  estimatedCostCents: number;
+  usageType: "chat" | "embedding" | "artifact" | "title" | "suggestion" | "whisper" | "tts";
+}) {
+  try {
+    const [row] = await db
+      .insert(tokenUsage)
+      .values({
+        ...data,
+        createdAt: new Date(),
+      })
+      .returning();
+
+    return row;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to insert token usage",
+    );
+  }
+}
+
+/** Returns all active model pricing rules. */
+export async function getActiveModelPricing(): Promise<ModelPricing[]> {
+  try {
+    return await db
+      .select()
+      .from(modelPricing)
+      .where(eq(modelPricing.isActive, true));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get active model pricing",
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// MFA exemption helpers
+// ---------------------------------------------------------------------------
+
+/** Returns the MFA exemption status for a user. */
+export async function getMfaExemptStatus(
+  userId: string
+): Promise<boolean> {
+  try {
+    const [row] = await db
+      .select({ mfaExempt: user.mfaExempt })
+      .from(user)
+      .where(eq(user.id, userId));
+
+    return row?.mfaExempt ?? false;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get MFA exempt status"
+    );
+  }
+}
+
+/** Toggles the MFA exemption flag for a user. */
+export async function setMfaExempt(
+  userId: string,
+  exempt: boolean
+) {
+  try {
+    const [updated] = await db
+      .update(user)
+      .set({ mfaExempt: exempt })
+      .where(eq(user.id, userId))
+      .returning();
+
+    return updated ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to set MFA exempt status"
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Allowed domain (SSO whitelist) helpers
+// ---------------------------------------------------------------------------
+
+/** Returns all whitelisted domains, ordered by domain. */
+export async function getAllowedDomains(): Promise<AllowedDomain[]> {
+  try {
+    return await db
+      .select()
+      .from(allowedDomain)
+      .orderBy(asc(allowedDomain.domain));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get allowed domains",
+    );
+  }
+}
+
+/**
+ * Returns a matching allowed domain for a given email domain and SSO provider.
+ * Matches entries where ssoProvider is 'any' or matches the given provider.
+ */
+export async function getAllowedDomainByEmail(
+  emailDomain: string,
+  provider: string,
+): Promise<AllowedDomain | null> {
+  try {
+    const [row] = await db
+      .select()
+      .from(allowedDomain)
+      .where(
+        and(
+          eq(allowedDomain.domain, emailDomain.toLowerCase()),
+          sql`(${allowedDomain.ssoProvider} = 'any' OR ${allowedDomain.ssoProvider} = ${provider})`,
+        ),
+      );
+
+    return row ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get allowed domain by email",
+    );
+  }
+}
+
+/** Creates a new allowed domain entry. */
+export async function createAllowedDomain(values: {
+  domain: string;
+  defaultRole: string;
+  ssoProvider: string;
+  createdBy: string;
+}): Promise<AllowedDomain> {
+  try {
+    const [created] = await db
+      .insert(allowedDomain)
+      .values({
+        domain: values.domain.toLowerCase(),
+        defaultRole: values.defaultRole,
+        ssoProvider: values.ssoProvider,
+        createdBy: values.createdBy,
+        createdAt: new Date(),
+      })
+      .returning();
+
+    return created;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to create allowed domain",
+    );
+  }
+}
+
+/** Deletes an allowed domain entry by ID. */
+export async function deleteAllowedDomain(id: string) {
+  try {
+    return await db
+      .delete(allowedDomain)
+      .where(eq(allowedDomain.id, id));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to delete allowed domain",
     );
   }
 }

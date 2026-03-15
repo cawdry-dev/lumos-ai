@@ -4,7 +4,7 @@ import { isToday, isYesterday, subMonths, subWeeks } from "date-fns";
 import { motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import useSWRInfinite from "swr/infinite";
 import {
@@ -18,32 +18,44 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
   useSidebar,
 } from "@/components/ui/sidebar";
-import type { Chat } from "@/lib/db/schema";
+import type { ChatWithCopilot } from "@/lib/db/queries";
 import { fetcher } from "@/lib/utils";
 import { LoaderIcon } from "./icons";
 import { ChatItem } from "./sidebar-history-item";
 
 type GroupedChats = {
-  today: Chat[];
-  yesterday: Chat[];
-  lastWeek: Chat[];
-  lastMonth: Chat[];
-  older: Chat[];
+  today: ChatWithCopilot[];
+  yesterday: ChatWithCopilot[];
+  lastWeek: ChatWithCopilot[];
+  lastMonth: ChatWithCopilot[];
+  older: ChatWithCopilot[];
 };
 
 export type ChatHistory = {
-  chats: Chat[];
+  chats: ChatWithCopilot[];
   hasMore: boolean;
 };
 
+/** Sentinel value meaning "show all chats". */
+const FILTER_ALL = "__all__";
+/** Sentinel value meaning "show only general (no co-pilot) chats". */
+const FILTER_GENERAL = "__general__";
+
 const PAGE_SIZE = 20;
 
-const groupChatsByDate = (chats: Chat[]): GroupedChats => {
+const groupChatsByDate = (chats: ChatWithCopilot[]): GroupedChats => {
   const now = new Date();
   const oneWeekAgo = subWeeks(now, 1);
   const oneMonthAgo = subMonths(now, 1);
@@ -115,6 +127,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [copilotFilter, setCopilotFilter] = useState<string>(FILTER_ALL);
 
   const hasReachedEnd = paginatedChatHistories
     ? paginatedChatHistories.some((page) => page.hasMore === false)
@@ -123,6 +136,24 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
   const hasEmptyChatHistory = paginatedChatHistories
     ? paginatedChatHistories.every((page) => page.chats.length === 0)
     : false;
+
+  // Derive the unique co-pilots present in the loaded chat history.
+  const availableCopilots = useMemo(() => {
+    if (!paginatedChatHistories) return [];
+    const map = new Map<string, { id: string; name: string; emoji: string | null }>();
+    for (const page of paginatedChatHistories) {
+      for (const c of page.chats) {
+        if (c.copilotId && c.copilotName && !map.has(c.copilotId)) {
+          map.set(c.copilotId, {
+            id: c.copilotId,
+            name: c.copilotName,
+            emoji: c.copilotEmoji,
+          });
+        }
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [paginatedChatHistories]);
 
   const handleDelete = () => {
     const chatToDelete = deleteId;
@@ -216,6 +247,26 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     <>
       <SidebarGroup>
         <SidebarGroupContent>
+          {/* Co-pilot filter */}
+          {availableCopilots.length > 0 && (
+            <div className="px-2 pb-2">
+              <Select value={copilotFilter} onValueChange={setCopilotFilter}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Filter by co-pilot" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={FILTER_ALL}>All chats</SelectItem>
+                  <SelectItem value={FILTER_GENERAL}>General</SelectItem>
+                  {availableCopilots.map((cp) => (
+                    <SelectItem key={cp.id} value={cp.id}>
+                      {cp.emoji ? `${cp.emoji} ` : ""}{cp.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <SidebarMenu>
             {paginatedChatHistories &&
               (() => {
@@ -223,7 +274,17 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                   (paginatedChatHistory) => paginatedChatHistory.chats
                 );
 
-                const groupedChats = groupChatsByDate(chatsFromHistory);
+                // Apply co-pilot filter
+                const filteredChats =
+                  copilotFilter === FILTER_ALL
+                    ? chatsFromHistory
+                    : copilotFilter === FILTER_GENERAL
+                      ? chatsFromHistory.filter((c) => !c.copilotId)
+                      : chatsFromHistory.filter(
+                          (c) => c.copilotId === copilotFilter
+                        );
+
+                const groupedChats = groupChatsByDate(filteredChats);
 
                 return (
                   <div className="flex flex-col gap-6">

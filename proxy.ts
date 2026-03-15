@@ -13,35 +13,24 @@ export async function proxy(request: NextRequest) {
   }
 
   // Refresh the Supabase auth session (token rotation, cookie sync)
-  const supabaseResponse = await updateSession(request);
+  const { response: supabaseResponse, supabase } =
+    await updateSession(request);
 
   // Allow auth callback routes to pass through without further checks
   if (pathname.startsWith("/auth")) {
     return supabaseResponse;
   }
 
-  // Check whether the user is authenticated by inspecting the refreshed cookies
+  // Check whether the user is authenticated
   const {
     data: { user },
-  } = await (async () => {
-    const { createServerClient } = await import("@supabase/ssr");
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll();
-          },
-          setAll() {},
-        },
-      }
-    );
-    return supabase.auth.getUser();
-  })();
+  } = await supabase.auth.getUser();
 
   // Paths that should be accessible without a profile row
   const publicPaths = ["/login", "/register", "/no-access"];
+
+  // MFA pages are accessible to authenticated users at AAL1
+  const mfaPaths = ["/mfa/enrol", "/mfa/verify", "/mfa/recovery"];
 
   if (!user) {
     // API routes should return 401 instead of redirecting
@@ -61,24 +50,13 @@ export async function proxy(request: NextRequest) {
   // Check whether the authenticated user has a profile row in the User table.
   // If not, they signed up via Supabase Auth but were never fully registered
   // (e.g. invitation was not used). Redirect them to /no-access.
-  if (!publicPaths.includes(pathname)) {
-    const { createServerClient } = await import("@supabase/ssr");
-    const supabaseForProfile = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll();
-          },
-          setAll() {},
-        },
-      }
-    );
-
-    const { data: profile } = await supabaseForProfile
+  if (
+    !publicPaths.includes(pathname) &&
+    !mfaPaths.includes(pathname)
+  ) {
+    const { data: profile } = await supabase
       .from("User")
-      .select("id")
+      .select("id, mfaExempt")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -90,6 +68,69 @@ export async function proxy(request: NextRequest) {
         );
       }
       return NextResponse.redirect(new URL("/no-access", request.url));
+    }
+
+    // -----------------------------------------------------------------------
+    // MFA enforcement
+    // -----------------------------------------------------------------------
+    const { data: aal } =
+      await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+    if (aal) {
+      const needsMfa =
+        aal.currentLevel === "aal1" && aal.nextLevel === "aal2";
+      const hasNoFactors =
+        !aal.currentAuthenticationMethods ||
+        aal.currentAuthenticationMethods.length === 0 ||
+        (aal.currentLevel === "aal1" && aal.nextLevel === "aal1");
+
+      if (needsMfa) {
+        // User has MFA factors enrolled but hasn't verified yet — challenge
+        if (pathname.startsWith("/api/")) {
+          return NextResponse.json(
+            { error: "MFA verification required." },
+            { status: 403 }
+          );
+        }
+        return NextResponse.redirect(
+          new URL("/mfa/verify", request.url)
+        );
+      }
+
+      // User has no MFA factors enrolled and is not exempt — force enrolment
+      if (
+        hasNoFactors &&
+        aal.nextLevel === "aal1" &&
+        !profile.mfaExempt
+      ) {
+        // Check if user actually has any enrolled factors
+        const { data: factors } = await supabase.auth.mfa.listFactors();
+        const verifiedFactors = [
+          ...(factors?.totp ?? []),
+          ...(factors?.phone ?? []),
+        ].filter((f) => f.status === "verified");
+
+        if (verifiedFactors.length === 0) {
+          if (pathname.startsWith("/api/")) {
+            return NextResponse.json(
+              { error: "MFA enrolment required." },
+              { status: 403 }
+            );
+          }
+          return NextResponse.redirect(
+            new URL("/mfa/enrol", request.url)
+          );
+        }
+      }
+    }
+  }
+
+  // MFA pages: redirect to home if user already has AAL2 or is exempt
+  if (mfaPaths.includes(pathname)) {
+    const { data: aal } =
+      await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal?.currentLevel === "aal2") {
+      return NextResponse.redirect(new URL("/", request.url));
     }
   }
 

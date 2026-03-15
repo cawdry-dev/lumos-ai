@@ -42,6 +42,71 @@ import { PreviewAttachment } from "./preview-attachment";
 import { SuggestedActions } from "./suggested-actions";
 import { Button } from "./ui/button";
 import type { VisibilityType } from "./visibility-selector";
+import { VoiceRecorder } from "./voice-recorder";
+
+/** Small budget indicator that fetches the user's remaining daily/monthly budget. */
+function BudgetIndicator() {
+  const [budget, setBudget] = useState<{
+    dailyUsedCents: number;
+    dailyLimitCents: number | null;
+    monthlyUsedCents: number;
+    monthlyLimitCents: number | null;
+    blocked: boolean;
+    blockReason: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchBudget() {
+      try {
+        const res = await fetch("/api/usage/budget");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setBudget(data);
+      } catch {
+        // Silently fail — budget indicator is non-critical
+      }
+    }
+    fetchBudget();
+    // Refresh every 60 seconds
+    const interval = setInterval(fetchBudget, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  if (!budget) return null;
+
+  if (budget.blocked) {
+    return (
+      <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-center text-destructive text-xs">
+        {budget.blockReason === "monthly"
+          ? "Monthly limit reached. Contact your admin."
+          : "You've reached your daily usage limit. Resets at midnight."}
+      </div>
+    );
+  }
+
+  // Only show if limits are set
+  if (budget.dailyLimitCents == null && budget.monthlyLimitCents == null) return null;
+
+  const parts: string[] = [];
+  if (budget.dailyLimitCents != null) {
+    const remaining = Math.max(0, budget.dailyLimitCents - budget.dailyUsedCents);
+    parts.push(`£${(remaining / 100).toFixed(2)} daily`);
+  }
+  if (budget.monthlyLimitCents != null) {
+    const remaining = Math.max(0, budget.monthlyLimitCents - budget.monthlyUsedCents);
+    parts.push(`£${(remaining / 100).toFixed(2)} monthly`);
+  }
+
+  return (
+    <p className="text-center text-muted-foreground text-xs">
+      Budget remaining: {parts.join(" · ")}
+    </p>
+  );
+}
 
 function setCookie(name: string, value: string) {
   const maxAge = 60 * 60 * 24 * 365; // 1 year
@@ -305,6 +370,8 @@ function PureMultimodalInput({
           />
         )}
 
+      <BudgetIndicator />
+
       <input
         className="pointer-events-none fixed -top-4 -left-4 size-0.5 opacity-0"
         multiple
@@ -381,6 +448,13 @@ function PureMultimodalInput({
               fileInputRef={fileInputRef}
               selectedModelId={selectedModelId}
               status={status}
+            />
+            <VoiceRecorder
+              chatId={chatId}
+              disabled={status !== "ready"}
+              onTranscription={(text) => {
+                setInput((prev) => (prev ? `${prev} ${text}` : text));
+              }}
             />
             <ModelSelectorCompact
               onModelChange={onModelChange}

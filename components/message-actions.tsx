@@ -7,6 +7,7 @@ import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { Action, Actions } from "./elements/actions";
 import { CopyIcon, PencilEditIcon, ThumbDownIcon, ThumbUpIcon } from "./icons";
+import { VoicePlayback } from "./voice-playback";
 
 export function PureMessageActions({
   chatId,
@@ -21,6 +22,7 @@ export function PureMessageActions({
   isLoading: boolean;
   setMode?: (mode: "view" | "edit") => void;
 }) {
+  const isAssistant = message.role === "assistant";
   const { mutate } = useSWRConfig();
   const [_, copyToClipboard] = useCopyToClipboard();
 
@@ -72,6 +74,10 @@ export function PureMessageActions({
       <Action onClick={handleCopy} tooltip="Copy">
         <CopyIcon />
       </Action>
+
+      {isAssistant && textFromParts && (
+        <VoicePlayback chatId={chatId} messageText={textFromParts} />
+      )}
 
       <Action
         data-testid="message-upvote"

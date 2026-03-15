@@ -58,6 +58,7 @@ async function ChatPage({ params }: { params: Promise<{ id: string }> }) {
     <>
       <Chat
         autoResume={true}
+        copilotId={chat.copilotId}
         id={chat.id}
         initialChatModel={selectedModel}
         initialMessages={uiMessages}

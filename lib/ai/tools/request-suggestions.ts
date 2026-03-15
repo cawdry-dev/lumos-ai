@@ -6,6 +6,7 @@ import type { Suggestion } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { generateUUID } from "@/lib/utils";
 import { getArtifactModel } from "../providers";
+import { recordUsage } from "../usage";
 
 type RequestSuggestionsProps = {
   session: Session;
@@ -40,7 +41,7 @@ export const requestSuggestions = ({
         "userId" | "createdAt" | "documentCreatedAt"
       >[] = [];
 
-      const { partialOutputStream } = streamText({
+      const { partialOutputStream, usage } = streamText({
         model: getArtifactModel(),
         system:
           "You are a help writing assistant. Given a piece of writing, please offer suggestions to improve the piece of writing and describe the change. It is very important for the edits to contain full sentences instead of just words. Max 5 suggestions.",
@@ -102,6 +103,17 @@ export const requestSuggestions = ({
             createdAt: new Date(),
             documentCreatedAt: document.createdAt,
           })),
+        });
+
+        // Record suggestion generation token usage
+        usage.then((u) => {
+          recordUsage({
+            userId,
+            modelId: "anthropic/claude-haiku-4.5",
+            promptTokens: u.inputTokens ?? 0,
+            completionTokens: u.outputTokens ?? 0,
+            usageType: "suggestion",
+          });
         });
       }
 

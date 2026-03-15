@@ -8,8 +8,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://chat.paylinkhub.com"),
-  title: "Totemic AI",
-  description: "Totemic AI — internal AI assistant powered by the AI SDK.",
+  title: "Lumos",
+  description: "Lumos — Guiding Conversations, Illuminating Insights.",
 };
 
 export const viewport = {
