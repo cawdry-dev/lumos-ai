@@ -96,6 +96,7 @@ export async function PUT(
     "sshPrivateKey",
     "modelId",
     "mcpServers",
+    "enabledTools",
     "isActive",
   ] as const;
 

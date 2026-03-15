@@ -62,6 +62,7 @@ export default async function EditCopilotPage({
               systemPrompt: copilotRow.systemPrompt ?? "",
               dbConnectionString: copilotRow.dbConnectionString ?? "",
               modelId: copilotRow.modelId ?? "",
+              enabledTools: copilotRow.enabledTools ?? [],
               mcpServers: (copilotRow.mcpServers ?? []).map((s) => ({
                 name: s.name,
                 url: s.url,
