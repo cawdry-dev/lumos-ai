@@ -327,21 +327,63 @@ const PurePreviewMessage = ({
                         <span>Searching the web…</span>
                       </div>
                     )}
-                    {state === "output-available" && (
-                      <ToolOutput
-                        errorText={undefined}
-                        output={
-                          <div className="flex items-center gap-2 px-2 py-1 text-sm">
-                            <Globe className="size-4 text-blue-500" />
-                            <span>
-                              {Array.isArray((part.output as { sources?: unknown[] })?.sources)
-                                ? `Found ${(part.output as { sources: unknown[] }).sources.length} source(s)`
-                                : "Web search complete"}
-                            </span>
-                          </div>
-                        }
-                      />
-                    )}
+                    {state === "output-available" && (() => {
+                      const output = part.output as {
+                        text?: string;
+                        content?: string;
+                        sources?: Array<{ title?: string; url?: string }>;
+                      } | undefined;
+                      const sources = Array.isArray(output?.sources) ? output.sources : [];
+                      const answerText = output?.text ?? output?.content;
+
+                      return (
+                        <ToolOutput
+                          errorText={undefined}
+                          output={
+                            <div className="space-y-2 px-2 py-1 text-sm">
+                              {sources.length > 0 ? (
+                                <>
+                                  <div className="flex items-center gap-2">
+                                    <Globe className="size-4 text-blue-500" />
+                                    <span className="font-medium">
+                                      Found {sources.length} source{sources.length !== 1 ? "s" : ""}
+                                    </span>
+                                  </div>
+                                  <ul className="space-y-1 pl-6">
+                                    {sources.map((source, idx) => (
+                                      <li key={idx}>
+                                        {source.url ? (
+                                          <a
+                                            href={source.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-blue-600 hover:underline dark:text-blue-400"
+                                          >
+                                            {source.title || source.url}
+                                          </a>
+                                        ) : (
+                                          <span>{source.title || "Untitled source"}</span>
+                                        )}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </>
+                              ) : answerText ? (
+                                <div className="flex items-center gap-2">
+                                  <Globe className="size-4 text-blue-500" />
+                                  <span>Web search complete</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <Globe className="size-4 text-blue-500" />
+                                  <span>Web search complete</span>
+                                </div>
+                              )}
+                            </div>
+                          }
+                        />
+                      );
+                    })()}
                   </ToolContent>
                 </Tool>
               );
