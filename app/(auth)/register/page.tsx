@@ -6,10 +6,13 @@ import { Suspense, useActionState, useEffect, useState } from "react";
 import { AuthForm } from "@/components/auth-form";
 import { SubmitButton } from "@/components/submit-button";
 import { toast } from "@/components/toast";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   type RegisterActionState,
   register,
   checkIsFirstUser,
+  getInvitationDisplayName,
 } from "../actions";
 
 export default function Page() {
@@ -26,6 +29,7 @@ function RegisterPage() {
   const token = searchParams.get("token");
 
   const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
   const [isFirstUser, setIsFirstUser] = useState<boolean | null>(null);
 
@@ -41,6 +45,16 @@ function RegisterPage() {
   useEffect(() => {
     checkIsFirstUser().then(setIsFirstUser);
   }, []);
+
+  // Pre-fill display name from invitation if available
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only run when token changes
+  useEffect(() => {
+    if (token) {
+      getInvitationDisplayName(token).then((name) => {
+        if (name) setDisplayName(name);
+      });
+    }
+  }, [token]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: router is a stable ref
   useEffect(() => {
@@ -92,6 +106,24 @@ function RegisterPage() {
         </div>
         {showForm && (
           <AuthForm action={handleSubmit} defaultEmail={email}>
+            <div className="flex flex-col gap-2">
+              <Label
+                className="font-normal text-zinc-600 dark:text-zinc-400"
+                htmlFor="displayName"
+              >
+                Full name
+              </Label>
+              <Input
+                className="bg-muted text-md md:text-sm"
+                id="displayName"
+                name="displayName"
+                placeholder="Jane Smith"
+                required
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+              />
+            </div>
             {token && <input type="hidden" name="token" value={token} />}
             <SubmitButton isSuccessful={isSuccessful}>Sign Up</SubmitButton>
             <p className="mt-4 text-center text-gray-600 text-sm dark:text-zinc-400">

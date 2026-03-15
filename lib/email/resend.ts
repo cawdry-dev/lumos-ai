@@ -23,12 +23,14 @@ export async function sendInvitationEmail({
   role,
   token,
   expiresAt,
+  displayName,
 }: {
   to: string;
   inviterEmail: string;
   role: string;
   token: string;
   expiresAt: Date;
+  displayName?: string;
 }) {
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -38,16 +40,20 @@ export async function sendInvitationEmail({
     (expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
   );
 
+  const greeting = displayName
+    ? `Hi ${displayName}, you've been invited!`
+    : "You've been invited!";
+
   const { data, error } = await getResendClient().emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? "Chatbot <noreply@example.com>",
+    from: process.env.RESEND_FROM_EMAIL ?? "Lumos <noreply@example.com>",
     to,
-    subject: "You've been invited to the Internal Chatbot",
+    subject: "You've been invited to Lumos",
     html: `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #333;">You've been invited!</h2>
+        <h2 style="color: #333;">${greeting}</h2>
         <p>
-          <strong>${inviterEmail}</strong> has invited you to join the
-          <strong>Internal Chatbot</strong> as ${role === "admin" ? "an" : "a"}
+          <strong>${inviterEmail}</strong> has invited you to join
+          <strong>Lumos</strong> as ${role === "admin" ? "an" : "a"}
           <strong>${role}</strong>.
         </p>
         <p>
