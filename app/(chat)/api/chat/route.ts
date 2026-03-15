@@ -77,6 +77,8 @@ export async function POST(request: Request) {
       selectedChatModel,
       selectedVisibilityType,
       copilotId,
+      enableWebSearch,
+      enableImageGen,
     } = requestBody;
 
     const session = await auth();
@@ -196,6 +198,11 @@ export async function POST(request: Request) {
 
     // Build the active tools list
     type ToolName = "getWeather" | "createDocument" | "updateDocument" | "requestSuggestions" | "searchKnowledge" | "queryDatabase" | "perplexity_search" | "image_generation";
+
+    // Default: web search ON for non-reasoning, image gen ON for GPT-5 non-reasoning
+    const webSearchEnabled = enableWebSearch ?? !isReasoningModel;
+    const imageGenEnabled = enableImageGen ?? (!isReasoningModel && selectedChatModel.startsWith("openai/gpt-5"));
+
     const baseActiveTools: ToolName[] = isReasoningModel
       ? []
       : [
@@ -203,11 +210,11 @@ export async function POST(request: Request) {
           "createDocument",
           "updateDocument",
           "requestSuggestions",
-          "perplexity_search",
+          ...(webSearchEnabled ? ["perplexity_search" as ToolName] : []),
         ];
 
     // Image generation is only available for OpenAI GPT-5 models
-    if (!isReasoningModel && selectedChatModel.startsWith("openai/gpt-5")) {
+    if (!isReasoningModel && selectedChatModel.startsWith("openai/gpt-5") && imageGenEnabled) {
       baseActiveTools.push("image_generation");
     }
 

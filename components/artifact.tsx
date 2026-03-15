@@ -73,6 +73,11 @@ function PureArtifact({
   selectedVisibilityType,
   selectedModelId,
   visibleModels,
+  enableWebSearch,
+  onToggleWebSearch,
+  enableImageGen,
+  onToggleImageGen,
+  supportsImageGen,
 }: {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   chatId: string;
@@ -91,6 +96,11 @@ function PureArtifact({
   selectedVisibilityType: VisibilityType;
   selectedModelId: string;
   visibleModels: ChatModel[];
+  enableWebSearch: boolean;
+  onToggleWebSearch: (enabled: boolean) => void;
+  enableImageGen: boolean;
+  onToggleImageGen: (enabled: boolean) => void;
+  supportsImageGen: boolean;
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
 
@@ -343,8 +353,12 @@ function PureArtifact({
                     attachments={attachments}
                     chatId={chatId}
                     className="bg-background dark:bg-muted"
+                    enableImageGen={enableImageGen}
+                    enableWebSearch={enableWebSearch}
                     input={input}
                     messages={messages}
+                    onToggleImageGen={onToggleImageGen}
+                    onToggleWebSearch={onToggleWebSearch}
                     selectedModelId={selectedModelId}
                     selectedVisibilityType={selectedVisibilityType}
                     sendMessage={sendMessage}
@@ -353,6 +367,7 @@ function PureArtifact({
                     setMessages={setMessages}
                     status={status}
                     stop={stop}
+                    supportsImageGen={supportsImageGen}
                     visibleModels={visibleModels}
                   />
                 </div>
