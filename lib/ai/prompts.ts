@@ -37,7 +37,7 @@ Do not update document right after creating it. Wait for user feedback or reques
 - Never use for general questions or information requests
 `;
 
-export const regularPrompt = `You are a friendly assistant! Keep your responses concise and helpful.
+export const regularPrompt = `You are Lumos, a friendly internal AI assistant. Keep your responses concise and helpful.
 
 When asked to write, create, or help with something, just do it directly. Don't ask clarifying questions unless absolutely necessary - make reasonable assumptions and proceed with the task.`;
 
@@ -56,24 +56,72 @@ About the origin of user's request:
 - country: ${requestHints.country}
 `;
 
+export const knowledgeRagPrompt = `\
+When the user asks about internal information, use the searchKnowledge tool to find relevant content.
+Always cite your sources by mentioning the document title when using retrieved information.`;
+
+export const dataCopilotPrompt = `\
+You are a data co-pilot that answers questions by querying a connected database.
+
+**Workflow:**
+1. When the user asks a question, first discover the database schema using the queryDatabase tool:
+   - For Postgres: \`SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position\`
+   - For MySQL: \`SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema = DATABASE() ORDER BY table_name, ordinal_position\`
+2. Use the schema to write a precise SELECT query that answers the question.
+3. Present results clearly — use tables, summaries, or charts as appropriate.
+4. If the query returns no results, explain what was searched and suggest alternatives.
+
+**Rules:**
+- Only use SELECT statements — never attempt to modify data.
+- Always provide an explanation of what your query does and why.
+- Limit results to what is relevant; use WHERE clauses and aggregations.
+- If the schema is large, query only the tables relevant to the user's question.
+- When presenting numerical data, include units and context where possible.`;
+
 export const systemPrompt = ({
   selectedChatModel,
   requestHints,
+  copilotSystemPrompt,
+  isKnowledgeCopilot,
+  isDataCopilot,
 }: {
   selectedChatModel: string;
   requestHints: RequestHints;
+  copilotSystemPrompt?: string | null;
+  isKnowledgeCopilot?: boolean;
+  isDataCopilot?: boolean;
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
 
-  // reasoning models don't need artifacts prompt (they can't use tools)
-  if (
-    selectedChatModel.includes("reasoning") ||
-    selectedChatModel.includes("thinking")
-  ) {
-    return `${regularPrompt}\n\n${requestPrompt}`;
+  const parts: string[] = [];
+
+  // Prepend the co-pilot's custom system prompt when present
+  if (copilotSystemPrompt) {
+    parts.push(copilotSystemPrompt);
   }
 
-  return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+  parts.push(regularPrompt);
+  parts.push(requestPrompt);
+
+  // reasoning models don't need artifacts prompt (they can't use tools)
+  if (
+    !selectedChatModel.includes("reasoning") &&
+    !selectedChatModel.includes("thinking")
+  ) {
+    parts.push(artifactsPrompt);
+  }
+
+  // Add RAG instructions for knowledge co-pilots
+  if (isKnowledgeCopilot) {
+    parts.push(knowledgeRagPrompt);
+  }
+
+  // Add data co-pilot instructions for database query co-pilots
+  if (isDataCopilot) {
+    parts.push(dataCopilotPrompt);
+  }
+
+  return parts.join("\n\n");
 };
 
 export const codePrompt = `
