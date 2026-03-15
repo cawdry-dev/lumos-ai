@@ -135,6 +135,7 @@ function PureMultimodalInput({
   enableImageGen,
   onToggleImageGen,
   supportsImageGen,
+  modelLocked,
 }: {
   chatId: string;
   input: string;
@@ -156,6 +157,7 @@ function PureMultimodalInput({
   enableImageGen: boolean;
   onToggleImageGen: (enabled: boolean) => void;
   supportsImageGen: boolean;
+  modelLocked?: boolean;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
@@ -510,6 +512,7 @@ function PureMultimodalInput({
               </Button>
             )}
             <ModelSelectorCompact
+              modelLocked={modelLocked}
               onModelChange={onModelChange}
               selectedModelId={selectedModelId}
               visibleModels={visibleModels}
@@ -600,10 +603,12 @@ function PureModelSelectorCompact({
   selectedModelId,
   onModelChange,
   visibleModels,
+  modelLocked,
 }: {
   selectedModelId: string;
   onModelChange?: (modelId: string) => void;
   visibleModels: ChatModel[];
+  modelLocked?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -633,6 +638,21 @@ function PureModelSelectorCompact({
     xai: "xAI",
     reasoning: "Reasoning",
   };
+
+  // When the model is locked by the co-pilot, show a non-interactive display
+  if (modelLocked) {
+    return (
+      <Button
+        className="h-8 w-[200px] cursor-default justify-between px-2 opacity-60"
+        disabled
+        title="Model locked by co-pilot"
+        variant="ghost"
+      >
+        {provider && <ModelSelectorLogo provider={provider} />}
+        <ModelSelectorName>{selectedModel.name}</ModelSelectorName>
+      </Button>
+    );
+  }
 
   return (
     <ModelSelector onOpenChange={setOpen} open={open}>

@@ -94,6 +94,7 @@ export async function PUT(
     "sshPort",
     "sshUsername",
     "sshPrivateKey",
+    "modelId",
     "isActive",
   ] as const;
 

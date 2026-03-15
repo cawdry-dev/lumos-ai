@@ -909,6 +909,7 @@ export async function createCopilot(values: {
   sshPort: number | null;
   sshUsername: string | null;
   sshPrivateKey: string | null;
+  modelId: string | null;
   isActive: boolean;
   createdBy: string;
 }) {
@@ -942,6 +943,7 @@ export async function updateCopilot(
     sshPort?: number | null;
     sshUsername?: string | null;
     sshPrivateKey?: string | null;
+    modelId?: string | null;
     isActive?: boolean;
   }
 ) {

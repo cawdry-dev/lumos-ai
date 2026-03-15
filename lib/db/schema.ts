@@ -98,6 +98,8 @@ export const copilot = pgTable("Copilot", {
   sshUsername: text("sshUsername"),
   /** SSH private key in PEM format (encrypted at rest). */
   sshPrivateKey: text("sshPrivateKey"),
+  /** Locked AI model for this co-pilot. When set, users cannot change the model. */
+  modelId: varchar("modelId", { length: 255 }),
   /** Whether this co-pilot is available to users. */
   isActive: boolean("isActive").notNull().default(true),
   /** The user who created this co-pilot. */

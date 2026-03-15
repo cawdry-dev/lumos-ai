@@ -74,7 +74,7 @@ export async function POST(request: Request) {
       id,
       message,
       messages,
-      selectedChatModel,
+      selectedChatModel: requestedChatModel,
       selectedVisibilityType,
       copilotId,
       enableWebSearch,
@@ -85,16 +85,6 @@ export async function POST(request: Request) {
 
     if (!session?.user) {
       return new ChatbotError("unauthorized:chat").toResponse();
-    }
-
-    // Validate the selected model is available via the gateway and enabled by admin
-    const visibleModels = await getVisibleModels();
-    const visibleModelIds = new Set(visibleModels.map((m) => m.id));
-    if (!visibleModelIds.has(selectedChatModel)) {
-      return new ChatbotError(
-        "bad_request:api",
-        "The selected model is not currently enabled. Please choose a different model.",
-      ).toResponse();
     }
 
     // If a co-pilot is specified, load it and verify user access
@@ -109,6 +99,19 @@ export async function POST(request: Request) {
       if (!available.some((c) => c.id === copilotId)) {
         return new ChatbotError("forbidden:chat").toResponse();
       }
+    }
+
+    // When the co-pilot has a locked model, override the user's selection
+    const selectedChatModel = activeCopilot?.modelId ?? requestedChatModel;
+
+    // Validate the selected model is available via the gateway and enabled by admin
+    const visibleModels = await getVisibleModels();
+    const visibleModelIds = new Set(visibleModels.map((m) => m.id));
+    if (!visibleModelIds.has(selectedChatModel)) {
+      return new ChatbotError(
+        "bad_request:api",
+        "The selected model is not currently enabled. Please choose a different model.",
+      ).toResponse();
     }
 
     await checkIpRateLimit(ipAddress(request));
