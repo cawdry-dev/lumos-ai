@@ -18,6 +18,9 @@ const runMigrate = async () => {
 
   console.log("⏳ Running migrations...");
 
+  // Ensure pgvector extension is available before any migration references the vector type
+  await connection`CREATE EXTENSION IF NOT EXISTS vector`;
+
   const start = Date.now();
   await migrate(db, { migrationsFolder: "./lib/db/migrations" });
   const end = Date.now();
