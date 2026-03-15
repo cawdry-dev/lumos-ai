@@ -67,12 +67,35 @@ function PureArtifactMessages({
       ))}
 
       <AnimatePresence mode="wait">
-        {status === "submitted" &&
-          !messages.some((msg) =>
+        {(() => {
+          const hasApprovalResponse = messages.some((msg) =>
             msg.parts?.some(
               (part) => "state" in part && part.state === "approval-responded"
             )
-          ) && <ThinkingMessage key="thinking" />}
+          );
+          if (hasApprovalResponse) return null;
+
+          if (status === "submitted")
+            return <ThinkingMessage key="thinking" />;
+
+          if (status === "streaming") {
+            const lastMessage = messages[messages.length - 1];
+            const hasTextContent =
+              lastMessage?.role === "assistant" &&
+              lastMessage.parts?.some(
+                (part) =>
+                  part.type === "text" &&
+                  "text" in part &&
+                  typeof part.text === "string" &&
+                  part.text.trim().length > 0
+              );
+            if (lastMessage?.role === "assistant" && !hasTextContent) {
+              return <ThinkingMessage key="thinking" />;
+            }
+          }
+
+          return null;
+        })()}
       </AnimatePresence>
 
       <motion.div
