@@ -21,6 +21,8 @@ import type { VisibilityType } from "@/components/visibility-selector";
 import { ChatbotError } from "../errors";
 import { generateUUID } from "../utils";
 import {
+  allowedDomain,
+  type AllowedDomain,
   type Chat,
   chat,
   copilot,
@@ -34,9 +36,13 @@ import {
   knowledgeDocument,
   type KnowledgeDocument,
   message,
+  modelPricing,
+  type ModelPricing,
   type Suggestion,
   stream,
   suggestion,
+  tokenUsage,
+  type TokenUsage,
   type User,
   user,
   vote,
@@ -611,11 +617,13 @@ export async function createProfile({
   email,
   role,
   invitedBy,
+  ssoProvider,
 }: {
   id: string;
   email: string;
   role: string;
   invitedBy?: string | null;
+  ssoProvider?: string | null;
 }) {
   try {
     return await db.insert(user).values({
@@ -624,6 +632,7 @@ export async function createProfile({
       role,
       invitedBy: invitedBy ?? undefined,
       invitedAt: invitedBy ? new Date() : undefined,
+      ssoProvider: ssoProvider ?? undefined,
     });
   } catch (_error) {
     throw new ChatbotError(
@@ -1234,6 +1243,438 @@ export async function searchKnowledgeChunks(
     throw new ChatbotError(
       "bad_request:database",
       "Failed to search knowledge chunks",
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Admin usage & pricing queries
+// ---------------------------------------------------------------------------
+
+/** Returns aggregated usage stats for the admin dashboard. */
+export async function getUsageStats({
+  from,
+  to,
+}: {
+  from: Date;
+  to: Date;
+}) {
+  try {
+    const rows = await db
+      .select({
+        userId: tokenUsage.userId,
+        email: user.email,
+        displayName: user.displayName,
+        modelId: tokenUsage.modelId,
+        copilotId: tokenUsage.copilotId,
+        copilotName: copilot.name,
+        usageType: tokenUsage.usageType,
+        totalPromptTokens: sql<number>`COALESCE(SUM(${tokenUsage.promptTokens}), 0)::int`,
+        totalCompletionTokens: sql<number>`COALESCE(SUM(${tokenUsage.completionTokens}), 0)::int`,
+        totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+        date: sql<string>`DATE(${tokenUsage.createdAt})`.as("date"),
+      })
+      .from(tokenUsage)
+      .innerJoin(user, eq(tokenUsage.userId, user.id))
+      .leftJoin(copilot, eq(tokenUsage.copilotId, copilot.id))
+      .where(
+        and(
+          gte(tokenUsage.createdAt, from),
+          lt(tokenUsage.createdAt, to),
+        ),
+      )
+      .groupBy(
+        tokenUsage.userId,
+        user.email,
+        user.displayName,
+        tokenUsage.modelId,
+        tokenUsage.copilotId,
+        copilot.name,
+        tokenUsage.usageType,
+        sql`DATE(${tokenUsage.createdAt})`,
+      );
+
+    return rows;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get usage stats",
+    );
+  }
+}
+
+/** Returns the user's total cost for a given period. */
+export async function getUserCostForPeriod({
+  userId: uid,
+  from,
+  to,
+}: {
+  userId: string;
+  from: Date;
+  to: Date;
+}) {
+  try {
+    const [row] = await db
+      .select({
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+        totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
+      })
+      .from(tokenUsage)
+      .where(
+        and(
+          eq(tokenUsage.userId, uid),
+          gte(tokenUsage.createdAt, from),
+          lt(tokenUsage.createdAt, to),
+        ),
+      );
+
+    return row ?? { totalCostCents: 0, totalTokens: 0 };
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get user cost for period",
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Model pricing queries
+// ---------------------------------------------------------------------------
+
+/** Returns all model pricing rules. */
+export async function getAllModelPricing() {
+  try {
+    return await db.select().from(modelPricing).orderBy(asc(modelPricing.modelPattern));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get model pricing",
+    );
+  }
+}
+
+/** Creates a new model pricing rule. */
+export async function createModelPricing(data: {
+  modelPattern: string;
+  promptPricePer1kTokens: string;
+  completionPricePer1kTokens: string;
+}) {
+  try {
+    const [row] = await db
+      .insert(modelPricing)
+      .values({
+        modelPattern: data.modelPattern,
+        promptPricePer1kTokens: data.promptPricePer1kTokens,
+        completionPricePer1kTokens: data.completionPricePer1kTokens,
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    return row;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to create model pricing",
+    );
+  }
+}
+
+/** Updates an existing model pricing rule. */
+export async function updateModelPricing(
+  id: string,
+  data: {
+    modelPattern?: string;
+    promptPricePer1kTokens?: string;
+    completionPricePer1kTokens?: string;
+    isActive?: boolean;
+  },
+) {
+  try {
+    const [row] = await db
+      .update(modelPricing)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(modelPricing.id, id))
+      .returning();
+
+    return row;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to update model pricing",
+    );
+  }
+}
+
+/** Deletes a model pricing rule. */
+export async function deleteModelPricing(id: string) {
+  try {
+    await db.delete(modelPricing).where(eq(modelPricing.id, id));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to delete model pricing",
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// User cost limit queries
+// ---------------------------------------------------------------------------
+
+/** Gets a user's cost limits (per-user overrides). */
+export async function getUserCostLimits(uid: string) {
+  try {
+    const [row] = await db
+      .select({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        dailyCostLimitCents: user.dailyCostLimitCents,
+        monthlyCostLimitCents: user.monthlyCostLimitCents,
+      })
+      .from(user)
+      .where(eq(user.id, uid));
+
+    return row ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get user cost limits",
+    );
+  }
+}
+
+/** Sets per-user cost limit overrides. Pass null to clear (use role default). */
+export async function setUserCostLimits(
+  uid: string,
+  limits: {
+    dailyCostLimitCents: number | null;
+    monthlyCostLimitCents: number | null;
+  },
+) {
+  try {
+    const [row] = await db
+      .update(user)
+      .set({
+        dailyCostLimitCents: limits.dailyCostLimitCents,
+        monthlyCostLimitCents: limits.monthlyCostLimitCents,
+      })
+      .where(eq(user.id, uid))
+      .returning();
+
+    return row;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to set user cost limits",
+    );
+  }
+}
+
+/** Returns all users with their cost limits for the admin user list. */
+export async function getAllUsersWithLimits() {
+  try {
+    return await db
+      .select({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        displayName: user.displayName,
+        dailyCostLimitCents: user.dailyCostLimitCents,
+        monthlyCostLimitCents: user.monthlyCostLimitCents,
+      })
+      .from(user)
+      .orderBy(asc(user.email));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get users with limits",
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Token usage insert helper
+// ---------------------------------------------------------------------------
+
+/** Inserts a single token usage record. */
+export async function insertTokenUsage(data: {
+  userId: string;
+  chatId?: string | null;
+  copilotId?: string | null;
+  modelId: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  estimatedCostCents: number;
+  usageType: "chat" | "embedding" | "artifact" | "title" | "suggestion";
+}) {
+  try {
+    const [row] = await db
+      .insert(tokenUsage)
+      .values({
+        ...data,
+        createdAt: new Date(),
+      })
+      .returning();
+
+    return row;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to insert token usage",
+    );
+  }
+}
+
+/** Returns all active model pricing rules. */
+export async function getActiveModelPricing(): Promise<ModelPricing[]> {
+  try {
+    return await db
+      .select()
+      .from(modelPricing)
+      .where(eq(modelPricing.isActive, true));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get active model pricing",
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// MFA exemption helpers
+// ---------------------------------------------------------------------------
+
+/** Returns the MFA exemption status for a user. */
+export async function getMfaExemptStatus(
+  userId: string
+): Promise<boolean> {
+  try {
+    const [row] = await db
+      .select({ mfaExempt: user.mfaExempt })
+      .from(user)
+      .where(eq(user.id, userId));
+
+    return row?.mfaExempt ?? false;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get MFA exempt status"
+    );
+  }
+}
+
+/** Toggles the MFA exemption flag for a user. */
+export async function setMfaExempt(
+  userId: string,
+  exempt: boolean
+) {
+  try {
+    const [updated] = await db
+      .update(user)
+      .set({ mfaExempt: exempt })
+      .where(eq(user.id, userId))
+      .returning();
+
+    return updated ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to set MFA exempt status"
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Allowed domain (SSO whitelist) helpers
+// ---------------------------------------------------------------------------
+
+/** Returns all whitelisted domains, ordered by domain. */
+export async function getAllowedDomains(): Promise<AllowedDomain[]> {
+  try {
+    return await db
+      .select()
+      .from(allowedDomain)
+      .orderBy(asc(allowedDomain.domain));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get allowed domains",
+    );
+  }
+}
+
+/**
+ * Returns a matching allowed domain for a given email domain and SSO provider.
+ * Matches entries where ssoProvider is 'any' or matches the given provider.
+ */
+export async function getAllowedDomainByEmail(
+  emailDomain: string,
+  provider: string,
+): Promise<AllowedDomain | null> {
+  try {
+    const [row] = await db
+      .select()
+      .from(allowedDomain)
+      .where(
+        and(
+          eq(allowedDomain.domain, emailDomain.toLowerCase()),
+          sql`(${allowedDomain.ssoProvider} = 'any' OR ${allowedDomain.ssoProvider} = ${provider})`,
+        ),
+      );
+
+    return row ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get allowed domain by email",
+    );
+  }
+}
+
+/** Creates a new allowed domain entry. */
+export async function createAllowedDomain(values: {
+  domain: string;
+  defaultRole: string;
+  ssoProvider: string;
+  createdBy: string;
+}): Promise<AllowedDomain> {
+  try {
+    const [created] = await db
+      .insert(allowedDomain)
+      .values({
+        domain: values.domain.toLowerCase(),
+        defaultRole: values.defaultRole,
+        ssoProvider: values.ssoProvider,
+        createdBy: values.createdBy,
+        createdAt: new Date(),
+      })
+      .returning();
+
+    return created;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to create allowed domain",
+    );
+  }
+}
+
+/** Deletes an allowed domain entry by ID. */
+export async function deleteAllowedDomain(id: string) {
+  try {
+    return await db
+      .delete(allowedDomain)
+      .where(eq(allowedDomain.id, id));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to delete allowed domain",
     );
   }
 }

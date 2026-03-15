@@ -52,6 +52,8 @@ export default async function AdminPage() {
               role: u.role,
               displayName: u.displayName,
               mfaExempt: u.mfaExempt,
+              dailyCostLimitCents: u.dailyCostLimitCents,
+              monthlyCostLimitCents: u.monthlyCostLimitCents,
             }))}
             currentUserId={session.user.id}
           />
