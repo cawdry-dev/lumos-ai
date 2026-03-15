@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['ssh2', 'cpu-features', 'mysql2'],
+  serverExternalPackages: ['ssh2', 'cpu-features', 'mysql2', 'pdf-parse'],
   cacheComponents: true,
   images: {
     remotePatterns: [
