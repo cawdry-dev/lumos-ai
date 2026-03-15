@@ -51,11 +51,13 @@ export async function saveChat({
   userId,
   title,
   visibility,
+  copilotId,
 }: {
   id: string;
   userId: string;
   title: string;
   visibility: VisibilityType;
+  copilotId?: string | null;
 }) {
   try {
     return await db.insert(chat).values({
@@ -64,6 +66,7 @@ export async function saveChat({
       userId,
       title,
       visibility,
+      ...(copilotId ? { copilotId } : {}),
     });
   } catch (_error) {
     throw new ChatbotError("bad_request:database", "Failed to save chat");
@@ -120,6 +123,12 @@ export async function deleteAllChatsByUserId({ userId }: { userId: string }) {
   }
 }
 
+/** A chat row enriched with its co-pilot's display info. */
+export type ChatWithCopilot = Chat & {
+  copilotName: string | null;
+  copilotEmoji: string | null;
+};
+
 export async function getChatsByUserId({
   id,
   limit,
@@ -136,8 +145,18 @@ export async function getChatsByUserId({
 
     const query = (whereCondition?: SQL<any>) =>
       db
-        .select()
+        .select({
+          id: chat.id,
+          createdAt: chat.createdAt,
+          title: chat.title,
+          userId: chat.userId,
+          copilotId: chat.copilotId,
+          visibility: chat.visibility,
+          copilotName: copilot.name,
+          copilotEmoji: copilot.emoji,
+        })
         .from(chat)
+        .leftJoin(copilot, eq(chat.copilotId, copilot.id))
         .where(
           whereCondition
             ? and(whereCondition, eq(chat.userId, id))
@@ -146,7 +165,7 @@ export async function getChatsByUserId({
         .orderBy(desc(chat.createdAt))
         .limit(extendedLimit);
 
-    let filteredChats: Chat[] = [];
+    let filteredChats: ChatWithCopilot[] = [];
 
     if (startingAfter) {
       const [selectedChat] = await db
@@ -898,6 +917,47 @@ export async function deleteCopilot(id: string) {
     return deleted ?? null;
   } catch (_error) {
     throw new ChatbotError("bad_request:database", "Failed to delete co-pilot");
+  }
+}
+
+/**
+ * Returns all active co-pilots that a user has access to.
+ *
+ * A co-pilot is accessible when either:
+ * - It has no rows in `copilotAccess` (open to everyone), OR
+ * - The user has an explicit `copilotAccess` row.
+ */
+export async function getAvailableCopilots(userId: string): Promise<Copilot[]> {
+  try {
+    // Sub-query: co-pilot IDs that have at least one access row
+    const restricted = db
+      .select({ copilotId: copilotAccess.copilotId })
+      .from(copilotAccess)
+      .groupBy(copilotAccess.copilotId);
+
+    // Sub-query: co-pilot IDs the user is explicitly granted
+    const granted = db
+      .select({ copilotId: copilotAccess.copilotId })
+      .from(copilotAccess)
+      .where(eq(copilotAccess.userId, userId));
+
+    const rows = await db
+      .select()
+      .from(copilot)
+      .where(
+        and(
+          eq(copilot.isActive, true),
+          sql`(${copilot.id} NOT IN (${restricted}) OR ${copilot.id} IN (${granted}))`,
+        ),
+      )
+      .orderBy(asc(copilot.name));
+
+    return rows;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get available co-pilots",
+    );
   }
 }
 

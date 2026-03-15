@@ -56,24 +56,47 @@ About the origin of user's request:
 - country: ${requestHints.country}
 `;
 
+export const knowledgeRagPrompt = `\
+When the user asks about internal information, use the searchKnowledge tool to find relevant content.
+Always cite your sources by mentioning the document title when using retrieved information.`;
+
 export const systemPrompt = ({
   selectedChatModel,
   requestHints,
+  copilotSystemPrompt,
+  isKnowledgeCopilot,
 }: {
   selectedChatModel: string;
   requestHints: RequestHints;
+  copilotSystemPrompt?: string | null;
+  isKnowledgeCopilot?: boolean;
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
 
-  // reasoning models don't need artifacts prompt (they can't use tools)
-  if (
-    selectedChatModel.includes("reasoning") ||
-    selectedChatModel.includes("thinking")
-  ) {
-    return `${regularPrompt}\n\n${requestPrompt}`;
+  const parts: string[] = [];
+
+  // Prepend the co-pilot's custom system prompt when present
+  if (copilotSystemPrompt) {
+    parts.push(copilotSystemPrompt);
   }
 
-  return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+  parts.push(regularPrompt);
+  parts.push(requestPrompt);
+
+  // reasoning models don't need artifacts prompt (they can't use tools)
+  if (
+    !selectedChatModel.includes("reasoning") &&
+    !selectedChatModel.includes("thinking")
+  ) {
+    parts.push(artifactsPrompt);
+  }
+
+  // Add RAG instructions for knowledge co-pilots
+  if (isKnowledgeCopilot) {
+    parts.push(knowledgeRagPrompt);
+  }
+
+  return parts.join("\n\n");
 };
 
 export const codePrompt = `

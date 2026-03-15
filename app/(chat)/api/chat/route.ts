@@ -17,6 +17,7 @@ import { getLanguageModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
+import { searchKnowledge } from "@/lib/ai/tools/search-knowledge";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { isProductionEnvironment } from "@/lib/constants";
 import { resolveImageUrlsForModel } from "@/lib/supabase/storage.server";
@@ -24,6 +25,8 @@ import {
   createStreamId,
   deleteChatById,
   getChatById,
+  getCopilotById,
+  getAvailableCopilots,
   getMessageCountByUserId,
   getMessagesByChatId,
   saveChat,
@@ -62,8 +65,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { id, message, messages, selectedChatModel, selectedVisibilityType } =
-      requestBody;
+    const {
+      id,
+      message,
+      messages,
+      selectedChatModel,
+      selectedVisibilityType,
+      copilotId,
+    } = requestBody;
 
     const session = await auth();
 
@@ -76,6 +85,20 @@ export async function POST(request: Request) {
     const visibleModelIds = new Set(visibleModels.map((m) => m.id));
     if (!visibleModelIds.has(selectedChatModel)) {
       return new ChatbotError("bad_request:api").toResponse();
+    }
+
+    // If a co-pilot is specified, load it and verify user access
+    let activeCopilot: Awaited<ReturnType<typeof getCopilotById>> | null = null;
+    if (copilotId) {
+      activeCopilot = await getCopilotById(copilotId);
+      if (!activeCopilot || !activeCopilot.isActive) {
+        return new ChatbotError("bad_request:api").toResponse();
+      }
+      // Verify the user has access to this co-pilot
+      const available = await getAvailableCopilots(session.user.id);
+      if (!available.some((c) => c.id === copilotId)) {
+        return new ChatbotError("forbidden:chat").toResponse();
+      }
     }
 
     await checkIpRateLimit(ipAddress(request));
@@ -110,6 +133,7 @@ export async function POST(request: Request) {
         userId: session.user.id,
         title: "New chat",
         visibility: selectedVisibilityType,
+        copilotId: copilotId ?? null,
       });
       titlePromise = generateTitleFromUserMessage({ message });
     }
@@ -147,26 +171,42 @@ export async function POST(request: Request) {
       (selectedChatModel.includes("reasoning") &&
         !selectedChatModel.includes("non-reasoning"));
 
+    const isKnowledgeCopilot =
+      activeCopilot !== null && activeCopilot.type === "knowledge";
+
     // Resolve supabase:attachments/ URLs to signed HTTPS URLs for the AI model
     const resolvedMessages = await resolveImageUrlsForModel(uiMessages);
     const modelMessages = await convertToModelMessages(resolvedMessages);
+
+    // Build the active tools list
+    type ToolName = "getWeather" | "createDocument" | "updateDocument" | "requestSuggestions" | "searchKnowledge";
+    const baseActiveTools: ToolName[] = isReasoningModel
+      ? []
+      : [
+          "getWeather",
+          "createDocument",
+          "updateDocument",
+          "requestSuggestions",
+        ];
+
+    if (isKnowledgeCopilot && !isReasoningModel) {
+      baseActiveTools.push("searchKnowledge");
+    }
 
     const stream = createUIMessageStream({
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
       execute: async ({ writer: dataStream }) => {
         const result = streamText({
           model: getLanguageModel(selectedChatModel),
-          system: systemPrompt({ selectedChatModel, requestHints }),
+          system: systemPrompt({
+            selectedChatModel,
+            requestHints,
+            copilotSystemPrompt: activeCopilot?.systemPrompt,
+            isKnowledgeCopilot,
+          }),
           messages: modelMessages,
           stopWhen: stepCountIs(5),
-          experimental_activeTools: isReasoningModel
-            ? []
-            : [
-                "getWeather",
-                "createDocument",
-                "updateDocument",
-                "requestSuggestions",
-              ],
+          experimental_activeTools: baseActiveTools,
           providerOptions: isReasoningModel
             ? {
                 anthropic: {
@@ -179,6 +219,13 @@ export async function POST(request: Request) {
             createDocument: createDocument({ session, dataStream }),
             updateDocument: updateDocument({ session, dataStream }),
             requestSuggestions: requestSuggestions({ session, dataStream }),
+            ...(isKnowledgeCopilot && activeCopilot
+              ? {
+                  searchKnowledge: searchKnowledge({
+                    copilotId: activeCopilot.id,
+                  }),
+                }
+              : {}),
           },
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,

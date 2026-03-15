@@ -3,6 +3,7 @@ import { ArrowDownIcon } from "lucide-react";
 import { useMessages } from "@/hooks/use-messages";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
+import type { CopilotOption } from "./copilot-selector";
 import { useDataStream } from "./data-stream-provider";
 import { Greeting } from "./greeting";
 import { PreviewMessage, ThinkingMessage } from "./message";
@@ -18,6 +19,9 @@ type MessagesProps = {
   isReadonly: boolean;
   isArtifactVisible: boolean;
   selectedModelId: string;
+  copilots?: CopilotOption[];
+  selectedCopilotId?: string | null;
+  onSelectCopilot?: (copilotId: string | null) => void;
 };
 
 function PureMessages({
@@ -30,6 +34,9 @@ function PureMessages({
   regenerate,
   isReadonly,
   selectedModelId: _selectedModelId,
+  copilots,
+  selectedCopilotId,
+  onSelectCopilot,
 }: MessagesProps) {
   const {
     containerRef: messagesContainerRef,
@@ -50,7 +57,13 @@ function PureMessages({
         ref={messagesContainerRef}
       >
         <div className="mx-auto flex min-w-0 max-w-4xl flex-col gap-4 px-2 py-4 md:gap-6 md:px-4">
-          {messages.length === 0 && <Greeting />}
+          {messages.length === 0 && (
+            <Greeting
+              copilots={copilots}
+              selectedCopilotId={selectedCopilotId}
+              onSelectCopilot={onSelectCopilot}
+            />
+          )}
 
           {messages.map((message, index) => (
             <PreviewMessage

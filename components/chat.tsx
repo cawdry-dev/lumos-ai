@@ -26,6 +26,7 @@ import { ChatbotError } from "@/lib/errors";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { fetcher, fetchWithErrorHandlers, generateUUID } from "@/lib/utils";
 import { Artifact } from "./artifact";
+import type { CopilotOption } from "./copilot-selector";
 import { useDataStream } from "./data-stream-provider";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
@@ -41,6 +42,7 @@ export function Chat({
   isReadonly,
   autoResume,
   visibleModels,
+  copilotId,
 }: {
   id: string;
   initialMessages: ChatMessage[];
@@ -49,6 +51,7 @@ export function Chat({
   isReadonly: boolean;
   autoResume: boolean;
   visibleModels: ChatModel[];
+  copilotId?: string | null;
 }) {
   const router = useRouter();
 
@@ -76,9 +79,19 @@ export function Chat({
   const [currentModelId, setCurrentModelId] = useState(initialChatModel);
   const currentModelIdRef = useRef(currentModelId);
 
+  // Co-pilot selection — state is defined early so the ref is available in the transport
+  const [selectedCopilotId, setSelectedCopilotId] = useState<string | null>(
+    copilotId ?? null,
+  );
+  const selectedCopilotIdRef = useRef(selectedCopilotId);
+
   useEffect(() => {
     currentModelIdRef.current = currentModelId;
   }, [currentModelId]);
+
+  useEffect(() => {
+    selectedCopilotIdRef.current = selectedCopilotId;
+  }, [selectedCopilotId]);
 
   const {
     messages,
@@ -129,6 +142,7 @@ export function Chat({
               : { message: lastMessage }),
             selectedChatModel: currentModelIdRef.current,
             selectedVisibilityType: visibilityType,
+            copilotId: selectedCopilotIdRef.current,
             ...request.body,
           },
         };
@@ -182,6 +196,13 @@ export function Chat({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
 
+  // Co-pilot selection — only fetch when on the new-chat screen
+  const isNewChat = initialMessages.length === 0;
+  const { data: availableCopilots } = useSWR<CopilotOption[]>(
+    isNewChat ? "/api/copilots/available" : null,
+    fetcher,
+  );
+
   useAutoResume({
     autoResume,
     initialMessages,
@@ -201,10 +222,13 @@ export function Chat({
         <Messages
           addToolApprovalResponse={addToolApprovalResponse}
           chatId={id}
+          copilots={availableCopilots}
           isArtifactVisible={isArtifactVisible}
           isReadonly={isReadonly}
           messages={messages}
+          onSelectCopilot={setSelectedCopilotId}
           regenerate={regenerate}
+          selectedCopilotId={selectedCopilotId}
           selectedModelId={initialChatModel}
           setMessages={setMessages}
           status={status}
