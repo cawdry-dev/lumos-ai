@@ -29,6 +29,11 @@ export type CopilotFormData = {
   type: "knowledge" | "data";
   systemPrompt: string;
   dbConnectionString: string;
+  dbType: "postgres" | "mysql";
+  sshHost: string;
+  sshPort: number;
+  sshUsername: string;
+  sshPrivateKey: string;
   isActive: boolean;
 };
 
@@ -39,6 +44,11 @@ const DEFAULTS: CopilotFormData = {
   type: "knowledge",
   systemPrompt: "",
   dbConnectionString: "",
+  dbType: "postgres",
+  sshHost: "",
+  sshPort: 22,
+  sshUsername: "",
+  sshPrivateKey: "",
   isActive: true,
 };
 
@@ -81,7 +91,12 @@ export function CopilotForm({
           emoji: data.emoji || null,
           type: data.type,
           systemPrompt: data.systemPrompt || null,
-          dbConnectionString: data.dbConnectionString || null,
+          dbConnectionString: data.type === "data" ? (data.dbConnectionString || null) : null,
+          dbType: data.type === "data" ? data.dbType : null,
+          sshHost: data.type === "data" && data.sshHost ? data.sshHost : null,
+          sshPort: data.type === "data" && data.sshHost ? data.sshPort : null,
+          sshUsername: data.type === "data" && data.sshHost ? (data.sshUsername || null) : null,
+          sshPrivateKey: data.type === "data" && data.sshHost ? (data.sshPrivateKey || null) : null,
           isActive: data.isActive,
         }),
       });
@@ -185,21 +200,105 @@ export function CopilotForm({
         </p>
       </div>
 
-      {/* DB connection string (shown for data type only) */}
+      {/* Data co-pilot configuration (shown for data type only) */}
       {data.type === "data" && (
-        <div className="space-y-2">
-          <Label htmlFor="dbConnectionString">Database Connection String</Label>
-          <Input
-            id="dbConnectionString"
-            type="password"
-            value={data.dbConnectionString}
-            onChange={(e) => update("dbConnectionString", e.target.value)}
-            placeholder="postgresql://user:pass@host:5432/dbname"
-          />
-          <p className="text-xs text-muted-foreground">
-            Connection string for the external Postgres database. Stored securely.
-          </p>
-        </div>
+        <>
+          {/* Database type selector */}
+          <div className="space-y-2">
+            <Label>Database Type</Label>
+            <div className="flex gap-4">
+              {(["postgres", "mysql"] as const).map((dt) => (
+                <label key={dt} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="dbType"
+                    value={dt}
+                    checked={data.dbType === dt}
+                    onChange={() => update("dbType", dt)}
+                    className="accent-primary"
+                  />
+                  <span className="text-sm">{dt === "postgres" ? "Postgres" : "MySQL HeatWave"}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Connection string */}
+          <div className="space-y-2">
+            <Label htmlFor="dbConnectionString">Database Connection String</Label>
+            <Input
+              id="dbConnectionString"
+              type="password"
+              value={data.dbConnectionString}
+              onChange={(e) => update("dbConnectionString", e.target.value)}
+              placeholder={
+                data.dbType === "postgres"
+                  ? "postgresql://user:pass@host:5432/dbname"
+                  : "mysql://user:pass@host:3306/dbname"
+              }
+            />
+            <p className="text-xs text-muted-foreground">
+              Connection string for the external database. Stored securely.
+            </p>
+          </div>
+
+          {/* SSH Tunnel configuration */}
+          <fieldset className="space-y-4 rounded-md border p-4">
+            <legend className="px-2 text-sm font-medium">SSH Tunnel (optional)</legend>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="sshHost">SSH Host</Label>
+                <Input
+                  id="sshHost"
+                  value={data.sshHost}
+                  onChange={(e) => update("sshHost", e.target.value)}
+                  placeholder="bastion.example.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sshPort">SSH Port</Label>
+                <Input
+                  id="sshPort"
+                  type="number"
+                  value={data.sshPort}
+                  onChange={(e) => update("sshPort", Number(e.target.value) || 22)}
+                  placeholder="22"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="sshUsername">SSH Username</Label>
+              <Input
+                id="sshUsername"
+                value={data.sshUsername}
+                onChange={(e) => update("sshUsername", e.target.value)}
+                placeholder="ec2-user"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="sshPrivateKey">SSH Private Key</Label>
+              <Textarea
+                id="sshPrivateKey"
+                value={data.sshPrivateKey}
+                onChange={(e) => update("sshPrivateKey", e.target.value)}
+                placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+                rows={4}
+                className="font-mono text-xs"
+              />
+              <p className="text-xs text-muted-foreground">
+                PEM-format private key for the SSH bastion host.
+              </p>
+            </div>
+          </fieldset>
+
+          {/* Test Connection button */}
+          <div>
+            <TestConnectionButton data={data} />
+          </div>
+        </>
       )}
 
       {/* Active toggle */}
@@ -233,3 +332,56 @@ export function CopilotForm({
   );
 }
 
+/** Small inline component for the "Test Connection" button. */
+function TestConnectionButton({ data }: { data: CopilotFormData }) {
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState<{ success: boolean; error?: string } | null>(null);
+
+  const handleTest = async () => {
+    if (!data.dbConnectionString) {
+      toast({ type: "error", description: "Please enter a connection string first." });
+      return;
+    }
+    setTesting(true);
+    setResult(null);
+    try {
+      const res = await fetch("/api/copilots/test-connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dbType: data.dbType,
+          dbConnectionString: data.dbConnectionString,
+          sshHost: data.sshHost || null,
+          sshPort: data.sshPort,
+          sshUsername: data.sshUsername || null,
+          sshPrivateKey: data.sshPrivateKey || null,
+        }),
+      });
+      const json = await res.json();
+      setResult(json);
+      if (json.success) {
+        toast({ type: "success", description: "Connection successful!" });
+      } else {
+        toast({ type: "error", description: json.error ?? "Connection failed." });
+      }
+    } catch {
+      setResult({ success: false, error: "Request failed." });
+      toast({ type: "error", description: "Connection test request failed." });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-3">
+      <Button type="button" variant="outline" onClick={handleTest} disabled={testing}>
+        {testing ? "Testing…" : "Test Connection"}
+      </Button>
+      {result && (
+        <span className={`text-sm ${result.success ? "text-green-600" : "text-red-600"}`}>
+          {result.success ? "✓ Connected" : `✗ ${result.error}`}
+        </span>
+      )}
+    </div>
+  );
+}

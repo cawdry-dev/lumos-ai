@@ -89,6 +89,11 @@ export async function PUT(
     "type",
     "systemPrompt",
     "dbConnectionString",
+    "dbType",
+    "sshHost",
+    "sshPort",
+    "sshUsername",
+    "sshPrivateKey",
     "isActive",
   ] as const;
 

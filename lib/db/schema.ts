@@ -75,8 +75,18 @@ export const copilot = pgTable("Copilot", {
   type: varchar("type", { length: 20, enum: ["knowledge", "data"] })
     .notNull()
     .default("knowledge"),
-  /** Encrypted Postgres connection string for data co-pilots. */
+  /** Encrypted database connection string for data co-pilots. */
   dbConnectionString: text("dbConnectionString"),
+  /** Database dialect — `postgres` or `mysql`. */
+  dbType: varchar("dbType", { length: 20 }),
+  /** SSH bastion hostname for tunnelled connections. */
+  sshHost: text("sshHost"),
+  /** SSH bastion port (defaults to 22). */
+  sshPort: integer("sshPort"),
+  /** SSH bastion username. */
+  sshUsername: text("sshUsername"),
+  /** SSH private key in PEM format (encrypted at rest). */
+  sshPrivateKey: text("sshPrivateKey"),
   /** Whether this co-pilot is available to users. */
   isActive: boolean("isActive").notNull().default(true),
   /** The user who created this co-pilot. */
@@ -154,7 +164,7 @@ export const document = pgTable(
     createdAt: timestamp("createdAt").notNull(),
     title: text("title").notNull(),
     content: text("content"),
-    kind: varchar("text", { enum: ["text", "code", "image", "sheet"] })
+    kind: varchar("text", { enum: ["text", "code", "image", "sheet", "chart"] })
       .notNull()
       .default("text"),
     userId: uuid("userId")

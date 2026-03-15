@@ -863,6 +863,11 @@ export async function createCopilot(values: {
   type: "knowledge" | "data";
   systemPrompt: string | null;
   dbConnectionString: string | null;
+  dbType: string | null;
+  sshHost: string | null;
+  sshPort: number | null;
+  sshUsername: string | null;
+  sshPrivateKey: string | null;
   isActive: boolean;
   createdBy: string;
 }) {
@@ -891,6 +896,11 @@ export async function updateCopilot(
     type?: "knowledge" | "data";
     systemPrompt?: string | null;
     dbConnectionString?: string | null;
+    dbType?: string | null;
+    sshHost?: string | null;
+    sshPort?: number | null;
+    sshUsername?: string | null;
+    sshPrivateKey?: string | null;
     isActive?: boolean;
   }
 ) {

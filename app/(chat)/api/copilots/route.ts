@@ -65,6 +65,11 @@ export async function POST(request: Request) {
     type?: string;
     systemPrompt?: string | null;
     dbConnectionString?: string | null;
+    dbType?: string | null;
+    sshHost?: string | null;
+    sshPort?: number | null;
+    sshUsername?: string | null;
+    sshPrivateKey?: string | null;
     isActive?: boolean;
   };
 
@@ -96,6 +101,11 @@ export async function POST(request: Request) {
       type: body.type as "knowledge" | "data",
       systemPrompt: body.systemPrompt ?? null,
       dbConnectionString: body.dbConnectionString ?? null,
+      dbType: body.dbType ?? null,
+      sshHost: body.sshHost ?? null,
+      sshPort: body.sshPort ?? null,
+      sshUsername: body.sshUsername ?? null,
+      sshPrivateKey: body.sshPrivateKey ?? null,
       isActive: body.isActive ?? true,
       createdBy: session.user.id,
     });

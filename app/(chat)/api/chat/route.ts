@@ -19,6 +19,8 @@ import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { searchKnowledge } from "@/lib/ai/tools/search-knowledge";
 import { updateDocument } from "@/lib/ai/tools/update-document";
+import { queryDatabase } from "@/lib/ai/tools/query-database";
+import type { DbType, SshConfig } from "@/lib/rag/db-connector";
 import { isProductionEnvironment } from "@/lib/constants";
 import { resolveImageUrlsForModel } from "@/lib/supabase/storage.server";
 import {
@@ -173,13 +175,15 @@ export async function POST(request: Request) {
 
     const isKnowledgeCopilot =
       activeCopilot !== null && activeCopilot.type === "knowledge";
+    const isDataCopilot =
+      activeCopilot !== null && activeCopilot.type === "data";
 
     // Resolve supabase:attachments/ URLs to signed HTTPS URLs for the AI model
     const resolvedMessages = await resolveImageUrlsForModel(uiMessages);
     const modelMessages = await convertToModelMessages(resolvedMessages);
 
     // Build the active tools list
-    type ToolName = "getWeather" | "createDocument" | "updateDocument" | "requestSuggestions" | "searchKnowledge";
+    type ToolName = "getWeather" | "createDocument" | "updateDocument" | "requestSuggestions" | "searchKnowledge" | "queryDatabase";
     const baseActiveTools: ToolName[] = isReasoningModel
       ? []
       : [
@@ -193,6 +197,21 @@ export async function POST(request: Request) {
       baseActiveTools.push("searchKnowledge");
     }
 
+    if (isDataCopilot && !isReasoningModel) {
+      baseActiveTools.push("queryDatabase");
+    }
+
+    // Build SSH config for data co-pilots if SSH fields are present
+    const sshConfig: SshConfig | undefined =
+      isDataCopilot && activeCopilot?.sshHost && activeCopilot?.sshUsername && activeCopilot?.sshPrivateKey
+        ? {
+            host: activeCopilot.sshHost,
+            port: activeCopilot.sshPort ?? 22,
+            username: activeCopilot.sshUsername,
+            privateKey: activeCopilot.sshPrivateKey,
+          }
+        : undefined;
+
     const stream = createUIMessageStream({
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
       execute: async ({ writer: dataStream }) => {
@@ -203,6 +222,7 @@ export async function POST(request: Request) {
             requestHints,
             copilotSystemPrompt: activeCopilot?.systemPrompt,
             isKnowledgeCopilot,
+            isDataCopilot,
           }),
           messages: modelMessages,
           stopWhen: stepCountIs(5),
@@ -223,6 +243,16 @@ export async function POST(request: Request) {
               ? {
                   searchKnowledge: searchKnowledge({
                     copilotId: activeCopilot.id,
+                  }),
+                }
+              : {}),
+            ...(isDataCopilot && activeCopilot?.dbConnectionString && activeCopilot?.dbType
+              ? {
+                  queryDatabase: queryDatabase({
+                    copilotId: activeCopilot.id,
+                    connectionString: activeCopilot.dbConnectionString,
+                    dbType: activeCopilot.dbType as DbType,
+                    ssh: sshConfig,
                   }),
                 }
               : {}),
