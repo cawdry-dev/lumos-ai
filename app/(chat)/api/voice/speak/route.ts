@@ -1,5 +1,6 @@
 import { auth } from "@/lib/supabase/auth";
 import { generateSpeech } from "@/lib/ai/voice";
+import { getProfileById } from "@/lib/db/queries";
 
 /**
  * POST /api/voice/speak
@@ -32,10 +33,14 @@ export async function POST(request: Request) {
     const maxChars = 5000;
     const truncatedText = text.slice(0, maxChars);
 
+    const userRow = await getProfileById(session.user.id);
+    const voice = userRow?.ttsVoice ?? "alloy";
+
     const audioStream = await generateSpeech({
       text: truncatedText,
       userId: session.user.id,
       chatId: chatId ?? null,
+      voice,
     });
 
     return new Response(audioStream, {

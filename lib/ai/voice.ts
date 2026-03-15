@@ -59,10 +59,11 @@ export async function generateSpeech(params: {
   text: string;
   userId: string;
   chatId?: string | null;
+  voice?: string;
 }): Promise<ReadableStream<Uint8Array>> {
   const response = await getOpenAI().audio.speech.create({
     model: "tts-1",
-    voice: "alloy",
+    voice: (params.voice || "alloy") as any,
     input: params.text,
     response_format: "mp3",
   });

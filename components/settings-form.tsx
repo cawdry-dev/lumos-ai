@@ -18,16 +18,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 
+const VOICES = [
+  { id: "alloy", label: "Alloy", description: "Neutral and balanced" },
+  { id: "ash", label: "Ash", description: "Soft and thoughtful" },
+  { id: "coral", label: "Coral", description: "Warm and friendly" },
+  { id: "sage", label: "Sage", description: "Calm and measured" },
+  { id: "echo", label: "Echo", description: "Clear and bright" },
+  { id: "shimmer", label: "Shimmer", description: "Expressive and lively" },
+] as const;
+
 type SettingsFormProps = {
   displayName: string;
   accentColour: string | null;
   ssoProvider: string | null;
+  ttsVoice: string | null;
 };
 
 export function SettingsForm({
   displayName: initialDisplayName,
   accentColour: initialAccentColour,
   ssoProvider,
+  ttsVoice: initialTtsVoice,
 }: SettingsFormProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
@@ -36,6 +47,9 @@ export function SettingsForm({
   // Display name state
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [savingName, setSavingName] = useState(false);
+
+  // Voice state
+  const [selectedVoice, setSelectedVoice] = useState(initialTtsVoice ?? "alloy");
 
   // Password state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -85,6 +99,24 @@ export function SettingsForm({
       toast.success("Accent colour saved");
     } catch (err: any) {
       toast.error(err.message ?? "Failed to save accent colour");
+    }
+  };
+
+  const handleSaveVoice = async (voice: string) => {
+    setSelectedVoice(voice);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ttsVoice: voice }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Failed to save");
+      }
+      toast.success("Voice updated");
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to save voice");
     }
   };
 
@@ -225,6 +257,31 @@ export function SettingsForm({
                 className="capitalize"
               >
                 {t}
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Voice */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Voice</CardTitle>
+          <CardDescription>
+            Choose a voice for text-to-speech playback.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {VOICES.map((v) => (
+              <Button
+                key={v.id}
+                variant={selectedVoice === v.id ? "default" : "outline"}
+                onClick={() => handleSaveVoice(v.id)}
+                className="h-auto flex-col items-start px-3 py-2 text-left"
+              >
+                <span className="font-medium">{v.label}</span>
+                <span className="text-xs opacity-70">{v.description}</span>
               </Button>
             ))}
           </div>
