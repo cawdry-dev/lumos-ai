@@ -1,6 +1,6 @@
 {
-  "id": "dadcb8bd-2576-448a-aebf-4fb406cee5c4",
-  "prevId": "b20e775b-d246-499a-979d-2642313331ec",
+  "id": "d479e4e6-190e-4eae-a92c-1880def34196",
+  "prevId": "dadcb8bd-2576-448a-aebf-4fb406cee5c4",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -234,6 +234,12 @@
         },
         "mcpServers": {
           "name": "mcpServers",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "enabledTools": {
+          "name": "enabledTools",
           "type": "json",
           "primaryKey": false,
           "notNull": false

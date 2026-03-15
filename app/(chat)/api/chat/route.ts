@@ -207,28 +207,40 @@ export async function POST(request: Request) {
     const webSearchEnabled = enableWebSearch ?? !isReasoningModel;
     const imageGenEnabled = enableImageGen ?? (!isReasoningModel && selectedChatModel.startsWith("openai/gpt-5"));
 
+    // Helper to check if a tool is enabled for this copilot
+    const copilotTools = new Set(activeCopilot?.enabledTools ?? []);
+    const hasCopilot = activeCopilot !== null;
+
     const baseActiveTools: ToolName[] = isReasoningModel
       ? []
-      : [
-          "getWeather",
-          "createDocument",
-          "updateDocument",
-          "requestSuggestions",
-          ...(webSearchEnabled && !isKnowledgeCopilot ? ["perplexity_search" as ToolName] : []),
-        ];
+      : (() => {
+          const tools: ToolName[] = [];
 
-    // Image generation is only available for OpenAI GPT-5 models (not for knowledge copilots)
-    if (!isReasoningModel && !isKnowledgeCopilot && selectedChatModel.startsWith("openai/gpt-5") && imageGenEnabled) {
-      baseActiveTools.push("image_generation");
-    }
+          // General chat (no copilot) — all tools available
+          if (!hasCopilot) {
+            tools.push("getWeather", "createDocument", "updateDocument", "requestSuggestions");
+            if (webSearchEnabled) tools.push("perplexity_search");
+            if (imageGenEnabled && selectedChatModel.startsWith("openai/gpt-5")) {
+              tools.push("image_generation");
+            }
+            return tools;
+          }
 
-    if (isKnowledgeCopilot && !isReasoningModel) {
-      baseActiveTools.push("searchKnowledge");
-    }
+          // Copilot — only core tool + admin-enabled extras
+          if (isKnowledgeCopilot) tools.push("searchKnowledge");
+          if (isDataCopilot) tools.push("queryDatabase");
 
-    if (isDataCopilot && !isReasoningModel) {
-      baseActiveTools.push("queryDatabase");
-    }
+          if (copilotTools.has("documents")) {
+            tools.push("createDocument", "updateDocument", "requestSuggestions");
+          }
+          if (copilotTools.has("weather")) tools.push("getWeather");
+          if (copilotTools.has("webSearch") && webSearchEnabled) tools.push("perplexity_search");
+          if (copilotTools.has("imageGen") && imageGenEnabled && selectedChatModel.startsWith("openai/gpt-5")) {
+            tools.push("image_generation");
+          }
+
+          return tools;
+        })();
 
     // Build SSH config for data co-pilots if SSH fields are present
     const sshConfig: SshConfig | undefined =
@@ -276,6 +288,7 @@ export async function POST(request: Request) {
               : mcpSystemSuffix || undefined,
             isKnowledgeCopilot,
             isDataCopilot,
+            enabledTools: activeCopilot?.enabledTools,
           }),
           messages: modelMessages,
           stopWhen: stepCountIs(5),

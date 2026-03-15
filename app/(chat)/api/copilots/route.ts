@@ -78,6 +78,7 @@ export async function POST(request: Request) {
       headers?: Record<string, string>;
       instructions?: string;
     }> | null;
+    enabledTools?: string[] | null;
     isActive?: boolean;
   };
 
@@ -116,6 +117,7 @@ export async function POST(request: Request) {
       sshPrivateKey: body.sshPrivateKey ?? null,
       modelId: body.modelId ?? null,
       mcpServers: body.mcpServers ?? null,
+      enabledTools: body.enabledTools ?? null,
       isActive: body.isActive ?? true,
       createdBy: session.user.id,
     });

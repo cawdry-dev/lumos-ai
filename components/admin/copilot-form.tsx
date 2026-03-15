@@ -47,6 +47,7 @@ export type CopilotFormData = {
   sshPrivateKey: string;
   modelId: string;
   mcpServers: McpServerEntry[];
+  enabledTools: string[];
   isActive: boolean;
 };
 
@@ -72,6 +73,7 @@ const DEFAULTS: CopilotFormData = {
   sshPrivateKey: "",
   modelId: "",
   mcpServers: [],
+  enabledTools: [],
   isActive: true,
 };
 
@@ -145,6 +147,7 @@ export function CopilotForm({
           sshUsername: data.type === "data" && data.sshHost ? (data.sshUsername || null) : null,
           sshPrivateKey: data.type === "data" && data.sshHost ? (data.sshPrivateKey || null) : null,
           modelId: data.modelId || null,
+          enabledTools: data.enabledTools.length > 0 ? data.enabledTools : null,
           mcpServers: data.mcpServers.length > 0
             ? data.mcpServers
                 .filter((s) => s.name.trim() && s.url.trim())
@@ -257,6 +260,41 @@ export function CopilotForm({
         <p className="text-xs text-muted-foreground">
           Custom persona instructions prepended to every conversation.
         </p>
+      </div>
+
+      {/* Enabled Tools */}
+      <div className="space-y-2">
+        <Label>Enabled Tools</Label>
+        <p className="text-xs text-muted-foreground">
+          Select which extra tools this co-pilot can use. The core tool
+          ({data.type === "knowledge" ? "Knowledge Search" : "Database Query"}) is always enabled.
+        </p>
+        <div className="space-y-2">
+          {[
+            { id: "webSearch", label: "Web Search", desc: "Search the web for current information" },
+            { id: "imageGen", label: "Image Generation", desc: "Generate images (GPT-5 models only)" },
+            { id: "weather", label: "Weather", desc: "Check current weather conditions" },
+            { id: "documents", label: "Documents & Artifacts", desc: "Create and edit documents, code, and spreadsheets" },
+          ].map((tool) => (
+            <label key={tool.id} className="flex items-start gap-3 rounded-md border p-3 cursor-pointer hover:bg-muted/50">
+              <input
+                type="checkbox"
+                checked={data.enabledTools.includes(tool.id)}
+                onChange={(e) => {
+                  const next = e.target.checked
+                    ? [...data.enabledTools, tool.id]
+                    : data.enabledTools.filter((t) => t !== tool.id);
+                  update("enabledTools", next);
+                }}
+                className="mt-0.5"
+              />
+              <div>
+                <div className="text-sm font-medium">{tool.label}</div>
+                <div className="text-xs text-muted-foreground">{tool.desc}</div>
+              </div>
+            </label>
+          ))}
+        </div>
       </div>
 
       {/* Locked model */}

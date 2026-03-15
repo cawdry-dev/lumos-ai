@@ -446,11 +446,11 @@ const PurePreviewMessage = ({
                         errorText={undefined}
                         output={
                           <div className="space-y-2 px-2 py-1">
-                            {(part.output as { base64?: string; mediaType?: string })?.base64 ? (
+                            {(part.output as { result?: string })?.result ? (
                               <img
                                 alt="Generated image"
                                 className="max-w-full rounded-md"
-                                src={`data:${(part.output as { base64: string; mediaType?: string }).mediaType ?? "image/png"};base64,${(part.output as { base64: string }).base64}`}
+                                src={`data:image/png;base64,${(part.output as { result: string }).result}`}
                               />
                             ) : (part.output as { url?: string })?.url ? (
                               <img

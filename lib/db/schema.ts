@@ -116,6 +116,8 @@ export const copilot = pgTable("Copilot", {
   modelId: varchar("modelId", { length: 255 }),
   /** Optional MCP server configurations for this co-pilot. */
   mcpServers: json("mcpServers").$type<McpServerConfig[] | null>(),
+  /** Optional list of extra tool IDs enabled for this co-pilot. */
+  enabledTools: json("enabledTools").$type<string[] | null>(),
   /** Whether this co-pilot is available to users. */
   isActive: boolean("isActive").notNull().default(true),
   /** The user who created this co-pilot. */
