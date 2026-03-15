@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 
 export function InvitationForm() {
+  const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("editor");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,7 +33,7 @@ export function InvitationForm() {
       const res = await fetch("/api/admin/invitations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), role }),
+        body: JSON.stringify({ email: email.trim(), role, displayName: displayName.trim() || undefined }),
       });
 
       const data = await res.json();
@@ -51,6 +52,7 @@ export function InvitationForm() {
         description: `Invitation sent! Link: ${link}`,
       });
 
+      setDisplayName("");
       setEmail("");
       setRole("editor");
     } catch {
@@ -62,6 +64,17 @@ export function InvitationForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="invite-name">Full name (optional)</Label>
+        <Input
+          id="invite-name"
+          type="text"
+          placeholder="Jane Smith"
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+        />
+      </div>
+
       <div className="flex flex-col gap-2">
         <Label htmlFor="invite-email">Email address</Label>
         <Input

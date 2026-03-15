@@ -8,6 +8,7 @@ type InvitationRow = {
   id: string;
   email: string;
   role: string;
+  displayName?: string | null;
   expiresAt: string;
 };
 
@@ -55,6 +56,7 @@ export function PendingInvitations({
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b text-left text-muted-foreground">
+            <th className="pb-2 pr-4 font-medium">Name</th>
             <th className="pb-2 pr-4 font-medium">Email</th>
             <th className="pb-2 pr-4 font-medium">Role</th>
             <th className="pb-2 pr-4 font-medium">Expires</th>
@@ -64,6 +66,9 @@ export function PendingInvitations({
         <tbody>
           {invitations.map((inv) => (
             <tr key={inv.id} className="border-b last:border-0">
+              <td className="py-3 pr-4 text-muted-foreground">
+                {inv.displayName || "—"}
+              </td>
               <td className="py-3 pr-4">{inv.email}</td>
               <td className="py-3 pr-4 capitalize">{inv.role}</td>
               <td className="py-3 pr-4 text-muted-foreground">
