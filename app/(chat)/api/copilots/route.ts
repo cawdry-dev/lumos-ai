@@ -70,6 +70,7 @@ export async function POST(request: Request) {
     sshPort?: number | null;
     sshUsername?: string | null;
     sshPrivateKey?: string | null;
+    modelId?: string | null;
     isActive?: boolean;
   };
 
@@ -106,6 +107,7 @@ export async function POST(request: Request) {
       sshPort: body.sshPort ?? null,
       sshUsername: body.sshUsername ?? null,
       sshPrivateKey: body.sshPrivateKey ?? null,
+      modelId: body.modelId ?? null,
       isActive: body.isActive ?? true,
       createdBy: session.user.id,
     });

@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import Script from "next/script";
 import { Suspense } from "react";
+import { Loader } from "@/components/ai-elements/loader";
 import { AppSidebar } from "@/components/app-sidebar";
 import { DataStreamProvider } from "@/components/data-stream-provider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -15,7 +16,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         strategy="beforeInteractive"
       />
       <DataStreamProvider>
-        <Suspense fallback={<div className="flex h-dvh" />}>
+        <Suspense fallback={<div className="flex h-dvh items-center justify-center"><Loader size={24} /></div>}>
           <SidebarWrapper>{children}</SidebarWrapper>
         </Suspense>
       </DataStreamProvider>

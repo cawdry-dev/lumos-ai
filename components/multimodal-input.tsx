@@ -135,6 +135,7 @@ function PureMultimodalInput({
   enableImageGen,
   onToggleImageGen,
   supportsImageGen,
+  modelLocked,
 }: {
   chatId: string;
   input: string;
@@ -156,6 +157,7 @@ function PureMultimodalInput({
   enableImageGen: boolean;
   onToggleImageGen: (enabled: boolean) => void;
   supportsImageGen: boolean;
+  modelLocked?: boolean;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
@@ -229,6 +231,13 @@ function PureMultimodalInput({
           name: attachment.name,
           mediaType: attachment.contentType,
         })),
+        // For document attachments, inject extracted text so the AI can read the content.
+        ...attachments
+          .filter((a) => a.extractedText)
+          .map((a) => ({
+            type: "text" as const,
+            text: `[Attached document: ${a.name}]\n${a.extractedText}`,
+          })),
         {
           type: "text",
           text: input,
@@ -268,12 +277,13 @@ function PureMultimodalInput({
 
       if (response.ok) {
         const data = await response.json();
-        const { url, pathname, contentType } = data;
+        const { url, pathname, contentType, extractedText } = data;
 
         return {
           url,
           name: pathname,
           contentType,
+          ...(extractedText !== undefined && { extractedText }),
         };
       }
       const { error } = await response.json();
@@ -383,6 +393,7 @@ function PureMultimodalInput({
       <BudgetIndicator />
 
       <input
+        accept="image/jpeg,image/png,.txt,.md,.pdf,text/plain,text/markdown,application/pdf"
         className="pointer-events-none fixed -top-4 -left-4 size-0.5 opacity-0"
         multiple
         onChange={handleFileChange}
@@ -501,6 +512,7 @@ function PureMultimodalInput({
               </Button>
             )}
             <ModelSelectorCompact
+              modelLocked={modelLocked}
               onModelChange={onModelChange}
               selectedModelId={selectedModelId}
               visibleModels={visibleModels}
@@ -591,10 +603,12 @@ function PureModelSelectorCompact({
   selectedModelId,
   onModelChange,
   visibleModels,
+  modelLocked,
 }: {
   selectedModelId: string;
   onModelChange?: (modelId: string) => void;
   visibleModels: ChatModel[];
+  modelLocked?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -624,6 +638,21 @@ function PureModelSelectorCompact({
     xai: "xAI",
     reasoning: "Reasoning",
   };
+
+  // When the model is locked by the co-pilot, show a non-interactive display
+  if (modelLocked) {
+    return (
+      <Button
+        className="h-8 w-[200px] cursor-default justify-between px-2 opacity-60"
+        disabled
+        title="Model locked by co-pilot"
+        variant="ghost"
+      >
+        {provider && <ModelSelectorLogo provider={provider} />}
+        <ModelSelectorName>{selectedModel.name}</ModelSelectorName>
+      </Button>
+    );
+  }
 
   return (
     <ModelSelector onOpenChange={setOpen} open={open}>

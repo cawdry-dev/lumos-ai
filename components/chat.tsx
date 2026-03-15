@@ -232,6 +232,18 @@ export function Chat({
     fetcher,
   );
 
+  // When the selected co-pilot has a locked model, override the model selector
+  const selectedCopilot = availableCopilots?.find(
+    (c) => c.id === selectedCopilotId,
+  );
+  const copilotLockedModelId = selectedCopilot?.modelId ?? null;
+
+  useEffect(() => {
+    if (copilotLockedModelId) {
+      setCurrentModelId(copilotLockedModelId);
+    }
+  }, [copilotLockedModelId]);
+
   useAutoResume({
     autoResume,
     initialMessages,
@@ -273,6 +285,7 @@ export function Chat({
               enableWebSearch={enableWebSearch}
               input={input}
               messages={messages}
+              modelLocked={!!copilotLockedModelId}
               onModelChange={setCurrentModelId}
               onToggleImageGen={setEnableImageGen}
               onToggleWebSearch={setEnableWebSearch}
@@ -300,6 +313,7 @@ export function Chat({
         input={input}
         isReadonly={isReadonly}
         messages={messages}
+        modelLocked={!!copilotLockedModelId}
         onToggleImageGen={setEnableImageGen}
         onToggleWebSearch={setEnableWebSearch}
         regenerate={regenerate}

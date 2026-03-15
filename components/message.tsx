@@ -17,7 +17,7 @@ import {
   ToolOutput,
 } from "./elements/tool";
 import { resolveAttachmentUrl } from "@/lib/supabase/storage";
-import { BookOpen, Database, Globe, ImageIcon } from "lucide-react";
+import { BookOpen, Database, FileTextIcon, Globe, ImageIcon } from "lucide-react";
 import { SparklesIcon } from "./icons";
 import { MessageActions } from "./message-actions";
 import { MessageEditor } from "./message-editor";
@@ -50,6 +50,13 @@ const PurePreviewMessage = ({
 
   const attachmentsFromMessage = message.parts.filter(
     (part) => part.type === "file"
+  );
+
+  const imageAttachments = attachmentsFromMessage.filter((a) =>
+    a.mediaType?.startsWith("image/")
+  );
+  const documentAttachments = attachmentsFromMessage.filter(
+    (a) => a.mediaType && !a.mediaType.startsWith("image/")
   );
 
   useDataStream();
@@ -88,12 +95,12 @@ const PurePreviewMessage = ({
               message.role === "user" && mode !== "edit",
           })}
         >
-          {attachmentsFromMessage.length > 0 && (
+          {imageAttachments.length > 0 && (
             <div
               className="flex flex-row justify-end gap-2"
               data-testid={"message-attachments"}
             >
-              {attachmentsFromMessage.map((attachment) => (
+              {imageAttachments.map((attachment) => (
                 <PreviewAttachment
                   attachment={{
                     name: attachment.filename ?? "file",
@@ -103,6 +110,36 @@ const PurePreviewMessage = ({
                   key={attachment.url}
                 />
               ))}
+            </div>
+          )}
+
+          {documentAttachments.length > 0 && (
+            <div
+              className="flex flex-col items-end gap-2"
+              data-testid={"message-document-attachments"}
+            >
+              {documentAttachments.map((attachment) => {
+                const fileName = attachment.filename ?? "file";
+                const ext = fileName.split(".").pop()?.toUpperCase() ?? "DOC";
+                const downloadUrl = resolveAttachmentUrl(attachment.url);
+
+                return (
+                  <a
+                    className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-sm transition-colors hover:bg-muted"
+                    download={fileName}
+                    href={downloadUrl}
+                    key={attachment.url}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate">{fileName}</span>
+                    <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                      {ext}
+                    </span>
+                  </a>
+                );
+              })}
             </div>
           )}
 
@@ -327,21 +364,63 @@ const PurePreviewMessage = ({
                         <span>Searching the web…</span>
                       </div>
                     )}
-                    {state === "output-available" && (
-                      <ToolOutput
-                        errorText={undefined}
-                        output={
-                          <div className="flex items-center gap-2 px-2 py-1 text-sm">
-                            <Globe className="size-4 text-blue-500" />
-                            <span>
-                              {Array.isArray((part.output as { sources?: unknown[] })?.sources)
-                                ? `Found ${(part.output as { sources: unknown[] }).sources.length} source(s)`
-                                : "Web search complete"}
-                            </span>
-                          </div>
-                        }
-                      />
-                    )}
+                    {state === "output-available" && (() => {
+                      const output = part.output as {
+                        text?: string;
+                        content?: string;
+                        sources?: Array<{ title?: string; url?: string }>;
+                      } | undefined;
+                      const sources = Array.isArray(output?.sources) ? output.sources : [];
+                      const answerText = output?.text ?? output?.content;
+
+                      return (
+                        <ToolOutput
+                          errorText={undefined}
+                          output={
+                            <div className="space-y-2 px-2 py-1 text-sm">
+                              {sources.length > 0 ? (
+                                <>
+                                  <div className="flex items-center gap-2">
+                                    <Globe className="size-4 text-blue-500" />
+                                    <span className="font-medium">
+                                      Found {sources.length} source{sources.length !== 1 ? "s" : ""}
+                                    </span>
+                                  </div>
+                                  <ul className="space-y-1 pl-6">
+                                    {sources.map((source, idx) => (
+                                      <li key={idx}>
+                                        {source.url ? (
+                                          <a
+                                            href={source.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-blue-600 hover:underline dark:text-blue-400"
+                                          >
+                                            {source.title || source.url}
+                                          </a>
+                                        ) : (
+                                          <span>{source.title || "Untitled source"}</span>
+                                        )}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </>
+                              ) : answerText ? (
+                                <div className="flex items-center gap-2">
+                                  <Globe className="size-4 text-blue-500" />
+                                  <span>Web search complete</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <Globe className="size-4 text-blue-500" />
+                                  <span>Web search complete</span>
+                                </div>
+                              )}
+                            </div>
+                          }
+                        />
+                      );
+                    })()}
                   </ToolContent>
                 </Tool>
               );
@@ -367,7 +446,13 @@ const PurePreviewMessage = ({
                         errorText={undefined}
                         output={
                           <div className="space-y-2 px-2 py-1">
-                            {(part.output as { url?: string })?.url ? (
+                            {(part.output as { base64?: string; mediaType?: string })?.base64 ? (
+                              <img
+                                alt="Generated image"
+                                className="max-w-full rounded-md"
+                                src={`data:${(part.output as { base64: string; mediaType?: string }).mediaType ?? "image/png"};base64,${(part.output as { base64: string }).base64}`}
+                              />
+                            ) : (part.output as { url?: string })?.url ? (
                               <img
                                 alt="Generated image"
                                 className="max-w-full rounded-md"

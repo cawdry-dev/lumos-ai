@@ -9,6 +9,8 @@ export interface CopilotOption {
   name: string;
   description: string;
   emoji: string | null;
+  /** When set, the model is locked and users cannot change it. */
+  modelId: string | null;
 }
 
 interface CopilotSelectorProps {

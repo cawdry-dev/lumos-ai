@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { Loader } from "@/components/ai-elements/loader";
 import { auth } from "@/lib/supabase/auth";
 import { Chat } from "@/components/chat";
 import { DataStreamHandler } from "@/components/data-stream-handler";
@@ -12,7 +13,7 @@ import { convertToUIMessages } from "@/lib/utils";
 
 export default function Page(props: { params: Promise<{ id: string }> }) {
   return (
-    <Suspense fallback={<div className="flex h-dvh" />}>
+    <Suspense fallback={<div className="flex h-dvh items-center justify-center"><Loader size={24} /></div>}>
       <ChatPage params={props.params} />
     </Suspense>
   );

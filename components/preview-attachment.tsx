@@ -1,8 +1,16 @@
 import type { Attachment } from "@/lib/types";
 import { resolveAttachmentUrl } from "@/lib/supabase/storage";
+import { FileTextIcon } from "lucide-react";
 import { Loader } from "./elements/loader";
 import { CrossSmallIcon } from "./icons";
 import { Button } from "./ui/button";
+
+/** Extract the file extension from a filename/path (e.g. "report.pdf" → "PDF"). */
+function getFileExtension(name?: string): string {
+  if (!name) return "DOC";
+  const ext = name.split(".").pop();
+  return ext ? ext.toUpperCase() : "DOC";
+}
 
 export const PreviewAttachment = ({
   attachment,
@@ -31,8 +39,11 @@ export const PreviewAttachment = ({
           width={64}
         />
       ) : (
-        <div className="flex size-full items-center justify-center text-muted-foreground text-xs">
-          File
+        <div className="flex size-full flex-col items-center justify-center gap-0.5 text-muted-foreground">
+          <FileTextIcon className="size-5" />
+          <span className="text-[9px] font-medium leading-none">
+            {getFileExtension(name)}
+          </span>
         </div>
       )}
 

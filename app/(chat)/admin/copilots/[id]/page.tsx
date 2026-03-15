@@ -61,6 +61,7 @@ export default async function EditCopilotPage({
               type: copilotRow.type as "knowledge" | "data",
               systemPrompt: copilotRow.systemPrompt ?? "",
               dbConnectionString: copilotRow.dbConnectionString ?? "",
+              modelId: copilotRow.modelId ?? "",
               isActive: copilotRow.isActive,
             }}
           />
