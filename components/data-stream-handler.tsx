@@ -41,6 +41,13 @@ export function DataStreamHandler() {
         });
       }
 
+      // Skip the generic switch for delta types already handled by onStreamPart
+      // to avoid a second setArtifact call that can overwrite content with stale state
+      const isDeltaType = delta.type.endsWith("Delta") || delta.type === "data-suggestion";
+      if (isDeltaType) {
+        continue;
+      }
+
       setArtifact((draftArtifact) => {
         if (!draftArtifact) {
           return { ...initialArtifactData, status: "streaming" };

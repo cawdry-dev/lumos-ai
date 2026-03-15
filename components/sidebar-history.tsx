@@ -2,6 +2,7 @@
 
 import { isToday, isYesterday, subMonths, subWeeks } from "date-fns";
 import { motion } from "framer-motion";
+import { XIcon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { useMemo, useState } from "react";
@@ -24,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -128,6 +130,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [copilotFilter, setCopilotFilter] = useState<string>(FILTER_ALL);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const hasReachedEnd = paginatedChatHistories
     ? paginatedChatHistories.some((page) => page.hasMore === false)
@@ -247,6 +250,27 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     <>
       <SidebarGroup>
         <SidebarGroupContent>
+          {/* Search input */}
+          <div className="relative px-2 pb-2">
+            <Input
+              className="h-8 pr-8 text-xs"
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search chats…"
+              type="text"
+              value={searchQuery}
+            />
+            {searchQuery && (
+              <button
+                aria-label="Clear search"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                onClick={() => setSearchQuery("")}
+                type="button"
+              >
+                <XIcon className="size-3.5" />
+              </button>
+            )}
+          </div>
+
           {/* Co-pilot filter */}
           {availableCopilots.length > 0 && (
             <div className="px-2 pb-2">
@@ -275,7 +299,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                 );
 
                 // Apply co-pilot filter
-                const filteredChats =
+                const copilotFiltered =
                   copilotFilter === FILTER_ALL
                     ? chatsFromHistory
                     : copilotFilter === FILTER_GENERAL
@@ -283,6 +307,14 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                       : chatsFromHistory.filter(
                           (c) => c.copilotId === copilotFilter
                         );
+
+                // Apply search filter
+                const normalised = searchQuery.trim().toLowerCase();
+                const filteredChats = normalised
+                  ? copilotFiltered.filter((c) =>
+                      c.title.toLowerCase().includes(normalised)
+                    )
+                  : copilotFiltered;
 
                 const groupedChats = groupChatsByDate(filteredChats);
 
