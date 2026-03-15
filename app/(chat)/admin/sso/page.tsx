@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { auth } from "@/lib/supabase/auth";
 import { getAllowedDomains } from "@/lib/db/queries";
 import { SsoSettings } from "@/components/admin/sso-settings";
@@ -10,6 +11,7 @@ import {
 } from "@/components/ui/card";
 
 export default async function SsoAdminPage() {
+  await connection();
   // Auth is already checked in the admin layout
   const session = (await auth())!;
   const domains = await getAllowedDomains();

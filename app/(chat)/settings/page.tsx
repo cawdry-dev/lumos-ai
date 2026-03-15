@@ -1,8 +1,10 @@
+import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/supabase/auth";
 import { SettingsForm } from "@/components/settings-form";
 
 export default async function SettingsPage() {
+  await connection();
   const session = await auth();
 
   if (!session) {
