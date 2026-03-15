@@ -446,24 +446,51 @@ const PurePreviewMessage = ({
                         errorText={undefined}
                         output={
                           <div className="space-y-2 px-2 py-1">
-                            {(part.output as { result?: string })?.result ? (
-                              <img
-                                alt="Generated image"
-                                className="max-w-full rounded-md"
-                                src={`data:image/png;base64,${(part.output as { result: string }).result}`}
-                              />
-                            ) : (part.output as { url?: string })?.url ? (
-                              <img
-                                alt="Generated image"
-                                className="max-w-full rounded-md"
-                                src={(part.output as { url: string }).url}
-                              />
-                            ) : (
-                              <div className="flex items-center gap-2 text-sm">
-                                <ImageIcon className="size-4 text-green-500" />
-                                <span>Image generation complete</span>
-                              </div>
-                            )}
+                            {(() => {
+                              const output = part.output as {
+                                result?: string;
+                                storagePath?: string;
+                                url?: string;
+                              };
+                              if (output?.storagePath) {
+                                // New format: image stored in Supabase Storage
+                                return (
+                                  // biome-ignore lint/performance/noImgElement: generated image served via API redirect
+                                  <img
+                                    alt="Generated image"
+                                    className="max-w-full rounded-md"
+                                    src={`/api/files/serve?path=${encodeURIComponent(output.storagePath)}`}
+                                  />
+                                );
+                              }
+                              if (output?.result) {
+                                // Legacy format: raw base64 inline
+                                return (
+                                  // biome-ignore lint/performance/noImgElement: base64 data URL
+                                  <img
+                                    alt="Generated image"
+                                    className="max-w-full rounded-md"
+                                    src={`data:image/png;base64,${output.result}`}
+                                  />
+                                );
+                              }
+                              if (output?.url) {
+                                return (
+                                  // biome-ignore lint/performance/noImgElement: external image URL
+                                  <img
+                                    alt="Generated image"
+                                    className="max-w-full rounded-md"
+                                    src={output.url}
+                                  />
+                                );
+                              }
+                              return (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <ImageIcon className="size-4 text-green-500" />
+                                  <span>Image generation complete</span>
+                                </div>
+                              );
+                            })()}
                           </div>
                         }
                       />
