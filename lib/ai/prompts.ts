@@ -56,6 +56,13 @@ About the origin of user's request:
 - country: ${requestHints.country}
 `;
 
+export const capabilitiesPrompt = `\
+You have access to the following additional capabilities:
+
+**Web Search:** You can search the web for current information using the \`perplexity_search\` tool. Use this when the user asks about recent events, current data, or anything that requires up-to-date information beyond your training data.
+
+**Image Generation:** You can generate images using the \`image_generation\` tool. Use this when the user asks you to create, draw, design, or generate an image. Describe the desired image clearly in your tool call.`;
+
 export const knowledgeRagPrompt = `\
 When the user asks about internal information, use the searchKnowledge tool to find relevant content.
 Always cite your sources by mentioning the document title when using retrieved information.`;
@@ -103,12 +110,13 @@ export const systemPrompt = ({
   parts.push(regularPrompt);
   parts.push(requestPrompt);
 
-  // reasoning models don't need artifacts prompt (they can't use tools)
+  // reasoning models don't need artifacts or capabilities prompts (they can't use tools)
   if (
     !selectedChatModel.includes("reasoning") &&
     !selectedChatModel.includes("thinking")
   ) {
     parts.push(artifactsPrompt);
+    parts.push(capabilitiesPrompt);
   }
 
   // Add RAG instructions for knowledge co-pilots

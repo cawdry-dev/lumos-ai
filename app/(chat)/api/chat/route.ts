@@ -3,10 +3,12 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
+  gateway,
   generateId,
   stepCountIs,
   streamText,
 } from "ai";
+import { openai } from "@ai-sdk/openai";
 import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
 import { auth, type UserType } from "@/lib/supabase/auth";
@@ -190,7 +192,7 @@ export async function POST(request: Request) {
     const modelMessages = await convertToModelMessages(resolvedMessages);
 
     // Build the active tools list
-    type ToolName = "getWeather" | "createDocument" | "updateDocument" | "requestSuggestions" | "searchKnowledge" | "queryDatabase";
+    type ToolName = "getWeather" | "createDocument" | "updateDocument" | "requestSuggestions" | "searchKnowledge" | "queryDatabase" | "perplexity_search" | "image_generation";
     const baseActiveTools: ToolName[] = isReasoningModel
       ? []
       : [
@@ -198,7 +200,13 @@ export async function POST(request: Request) {
           "createDocument",
           "updateDocument",
           "requestSuggestions",
+          "perplexity_search",
         ];
+
+    // Image generation is only available for OpenAI GPT-5 models
+    if (!isReasoningModel && selectedChatModel.startsWith("openai/gpt-5")) {
+      baseActiveTools.push("image_generation");
+    }
 
     if (isKnowledgeCopilot && !isReasoningModel) {
       baseActiveTools.push("searchKnowledge");
@@ -246,6 +254,8 @@ export async function POST(request: Request) {
             createDocument: createDocument({ session, dataStream }),
             updateDocument: updateDocument({ session, dataStream }),
             requestSuggestions: requestSuggestions({ session, dataStream }),
+            perplexity_search: gateway.tools.perplexitySearch() as any,
+            image_generation: openai.tools.imageGeneration({ model: "gpt-image-1", quality: "medium" }) as any,
             ...(isKnowledgeCopilot && activeCopilot
               ? {
                   searchKnowledge: searchKnowledge({
