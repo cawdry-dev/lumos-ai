@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getCopilotById, getAllUsers } from "@/lib/db/queries";
 import { CopilotForm } from "@/components/admin/copilot-form";
 import { CopilotAccess } from "@/components/admin/copilot-access";
+import { KnowledgeDocuments } from "@/components/admin/knowledge-documents";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -65,6 +66,22 @@ export default async function EditCopilotPage({
           />
         </CardContent>
       </Card>
+
+      {/* Knowledge documents (shown for knowledge-type co-pilots only) */}
+      {copilotRow.type === "knowledge" && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-xl">Knowledge Base</CardTitle>
+            <CardDescription>
+              Upload documents to build this co-pilot&apos;s knowledge base.
+              Supported formats: .txt, .md, .pdf (max 10 MB).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <KnowledgeDocuments copilotId={copilotRow.id} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Access management */}
       <Card>
