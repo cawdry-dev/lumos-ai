@@ -50,7 +50,7 @@ export default function Page() {
       <div className="flex w-full max-w-md flex-col gap-12 overflow-hidden rounded-2xl">
         <div className="flex flex-col items-center justify-center gap-2 px-4 text-center sm:px-16">
           <h1 className="font-bold text-3xl tracking-tight dark:text-zinc-50">
-            ✦ Lumos
+            ✦ Lumos AI
           </h1>
           <p className="text-zinc-400 text-sm italic">
             Guiding Conversations, Illuminating Insights

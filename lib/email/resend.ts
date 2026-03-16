@@ -45,15 +45,15 @@ export async function sendInvitationEmail({
     : "You've been invited!";
 
   const { data, error } = await getResendClient().emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? "Lumos <noreply@example.com>",
+    from: process.env.RESEND_FROM_EMAIL ?? "Lumos AI <noreply@example.com>",
     to,
-    subject: "You've been invited to Lumos",
+    subject: "You've been invited to Lumos AI",
     html: `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #333;">${greeting}</h2>
         <p>
           <strong>${inviterEmail}</strong> has invited you to join
-          <strong>Lumos</strong> as ${role === "admin" ? "an" : "a"}
+          <strong>Lumos AI</strong> as ${role === "admin" ? "an" : "a"}
           <strong>${role}</strong>.
         </p>
         <p>

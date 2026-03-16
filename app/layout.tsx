@@ -8,8 +8,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://chat.paylinkhub.com"),
-  title: "Lumos",
-  description: "Lumos — Guiding Conversations, Illuminating Insights.",
+  title: "Lumos AI",
+  description: "Lumos AI — Guiding Conversations, Illuminating Insights.",
 };
 
 export const viewport = {
