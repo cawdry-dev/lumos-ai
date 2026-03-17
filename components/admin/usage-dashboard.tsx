@@ -845,9 +845,10 @@ export function UsageDashboard() {
                     cy="50%"
                     innerRadius={60}
                     outerRadius={120}
-                    label={({ name, percent }: { name: string; percent: number }) =>
-                      `${name.length > 12 ? `${name.slice(0, 12)}…` : name} ${(percent * 100).toFixed(0)}%`
-                    }
+                    label={({ name, percent }: { name?: string; percent: number }) => {
+                      const label = name ?? "Unknown";
+                      return `${label.length > 12 ? `${label.slice(0, 12)}…` : label} ${(percent * 100).toFixed(0)}%`;
+                    }}
                     labelLine={false}
                   >
                     {userPieData.map((_, i) => (
