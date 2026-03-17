@@ -15,7 +15,7 @@ import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { checkCostLimits, recordUsage } from "@/lib/ai/usage";
 import { getVisibleModels } from "@/lib/ai/models.server";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
-import { getLanguageModel } from "@/lib/ai/providers";
+import { getLanguageModel, isReasoningModel as checkIsReasoningModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
@@ -243,10 +243,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const isReasoningModel =
-      selectedChatModel.endsWith("-thinking") ||
-      (selectedChatModel.includes("reasoning") &&
-        !selectedChatModel.includes("non-reasoning"));
+    const isReasoningModel = checkIsReasoningModel(selectedChatModel);
 
     const isKnowledgeCopilot =
       activeCopilot !== null && activeCopilot.type === "knowledge";
