@@ -770,7 +770,7 @@ export function UsageDashboard() {
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip
-                    formatter={(v: number) => [`£${Number(v).toFixed(2)}`, "Cost"]}
+                    formatter={(v) => [`£${Number(v).toFixed(2)}`, "Cost"]}
                   />
                   <Area
                     type="monotone"
@@ -808,7 +808,7 @@ export function UsageDashboard() {
                     width={120}
                   />
                   <Tooltip
-                    formatter={(v: number) => [`£${Number(v).toFixed(2)}`, "Cost"]}
+                    formatter={(v) => [`£${Number(v).toFixed(2)}`, "Cost"]}
                   />
                   <Bar
                     dataKey="cost"
@@ -835,7 +835,7 @@ export function UsageDashboard() {
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Tooltip
-                    formatter={(v: number) => [`£${Number(v).toFixed(2)}`, "Cost"]}
+                    formatter={(v) => [`£${Number(v).toFixed(2)}`, "Cost"]}
                   />
                   <Pie
                     data={userPieData}
@@ -880,7 +880,7 @@ export function UsageDashboard() {
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip
-                    formatter={(v: number, name: string) => [
+                    formatter={(v, name) => [
                       formatNumber(Number(v)),
                       name === "promptTokens" ? "Prompt" : "Completion",
                     ]}
