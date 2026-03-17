@@ -44,11 +44,9 @@ export async function extractText(
       return buffer.toString("utf-8");
 
     case "application/pdf": {
-      const { PDFParse } = await import("pdf-parse");
-      const parser = new PDFParse({ data: new Uint8Array(buffer) });
-      const result = await parser.getText();
-      await parser.destroy();
-      return result.text;
+      const { extractText: extractPdfText } = await import("unpdf");
+      const { text } = await extractPdfText(new Uint8Array(buffer));
+      return text.join("\n");
     }
 
     default:
