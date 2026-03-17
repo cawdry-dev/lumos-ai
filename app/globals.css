@@ -398,6 +398,31 @@
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
 }
 
+/* ── Landing page animations ── */
+@keyframes landing-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes landing-slide-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes landing-orb-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(30px, -20px) scale(1.05); }
+  66%      { transform: translate(-20px, 15px) scale(0.97); }
+}
+
+.animate-landing-fade-in {
+  animation: landing-fade-in 0.7s ease-out both;
+}
+.animate-landing-slide-up {
+  animation: landing-slide-up 0.7s ease-out both;
+}
+.animate-landing-orb {
+  animation: landing-orb-drift 12s ease-in-out infinite;
+}
+
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
