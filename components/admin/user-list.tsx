@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { toast } from "@/components/toast";
 import {
   Select,
@@ -9,6 +9,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 type UserRow = {
   id: string;
@@ -58,6 +68,85 @@ export function UserList({
     }
   };
 
+  const [memoryDialogUserId, setMemoryDialogUserId] = useState<string | null>(null);
+  const [memoryStatus, setMemoryStatus] = useState<{
+    memoryEnabled: boolean;
+    memoryCount: number;
+  } | null>(null);
+  const [memoryLoading, setMemoryLoading] = useState(false);
+  const [clearConfirm, setClearConfirm] = useState(false);
+
+  const openMemoryDialog = useCallback(async (userId: string) => {
+    setMemoryDialogUserId(userId);
+    setMemoryStatus(null);
+    setMemoryLoading(true);
+    setClearConfirm(false);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/memory`);
+      if (!res.ok) {
+        toast({ type: "error", description: "Failed to fetch memory status." });
+        setMemoryDialogUserId(null);
+        return;
+      }
+      const data = await res.json();
+      setMemoryStatus(data);
+    } catch {
+      toast({ type: "error", description: "Failed to fetch memory status." });
+      setMemoryDialogUserId(null);
+    } finally {
+      setMemoryLoading(false);
+    }
+  }, []);
+
+  const handleMemoryToggle = async () => {
+    if (!memoryDialogUserId || !memoryStatus) return;
+    setMemoryLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${memoryDialogUserId}/memory`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memoryEnabled: !memoryStatus.memoryEnabled }),
+      });
+      if (!res.ok) {
+        toast({ type: "error", description: "Failed to update memory setting." });
+        return;
+      }
+      const data = await res.json();
+      setMemoryStatus(data);
+      toast({
+        type: "success",
+        description: data.memoryEnabled
+          ? "Memory enabled for user."
+          : "Memory disabled for user.",
+      });
+    } catch {
+      toast({ type: "error", description: "Failed to update memory setting." });
+    } finally {
+      setMemoryLoading(false);
+    }
+  };
+
+  const handleClearMemories = async () => {
+    if (!memoryDialogUserId) return;
+    setMemoryLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${memoryDialogUserId}/memory`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        toast({ type: "error", description: "Failed to clear memories." });
+        return;
+      }
+      setMemoryStatus((prev) => prev ? { ...prev, memoryCount: 0 } : prev);
+      setClearConfirm(false);
+      toast({ type: "success", description: "All memories cleared for user." });
+    } catch {
+      toast({ type: "error", description: "Failed to clear memories." });
+    } finally {
+      setMemoryLoading(false);
+    }
+  };
+
   const handleMfaExemptToggle = async (userId: string, exempt: boolean) => {
     try {
       const res = await fetch(`/api/admin/users/${userId}/mfa`, {
@@ -95,7 +184,8 @@ export function UserList({
             <th className="pb-2 pr-4 font-medium">Display Name</th>
             <th className="pb-2 pr-4 font-medium">Role</th>
             <th className="pb-2 pr-4 font-medium">Cost Limit</th>
-            <th className="pb-2 font-medium">MFA Exempt</th>
+            <th className="pb-2 pr-4 font-medium">MFA Exempt</th>
+            <th className="pb-2 font-medium">Memory</th>
           </tr>
         </thead>
         <tbody>
@@ -130,7 +220,7 @@ export function UserList({
                   ? `${formatLimit(u.dailyCostLimitCents)}/day · ${formatLimit(u.monthlyCostLimitCents)}/mo`
                   : "Role default"}
               </td>
-              <td className="py-3">
+              <td className="py-3 pr-4">
                 {u.id === currentUserId ? (
                   <span className="text-muted-foreground text-xs">—</span>
                 ) : (
@@ -152,6 +242,15 @@ export function UserList({
                   </button>
                 )}
               </td>
+              <td className="py-3">
+                <button
+                  type="button"
+                  onClick={() => openMemoryDialog(u.id)}
+                  className="text-xs text-muted-foreground underline-offset-4 hover:underline hover:text-foreground transition-colors"
+                >
+                  Manage
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -161,6 +260,107 @@ export function UserList({
           No users found.
         </p>
       )}
+
+      {/* Memory management dialog */}
+      <Dialog
+        open={memoryDialogUserId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setMemoryDialogUserId(null);
+            setClearConfirm(false);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Memory Management</DialogTitle>
+            <DialogDescription>
+              Manage memory settings for{" "}
+              {userList.find((u) => u.id === memoryDialogUserId)?.email ?? "this user"}.
+            </DialogDescription>
+          </DialogHeader>
+
+          {memoryLoading && !memoryStatus ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              Loading…
+            </p>
+          ) : memoryStatus ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Memory</p>
+                  <p className="text-xs text-muted-foreground">
+                    {memoryStatus.memoryEnabled ? "Enabled" : "Disabled"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleMemoryToggle}
+                  disabled={memoryLoading}
+                  className={`inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors disabled:opacity-50 ${
+                    memoryStatus.memoryEnabled ? "bg-primary" : "bg-input"
+                  }`}
+                  role="switch"
+                  aria-checked={memoryStatus.memoryEnabled}
+                  aria-label="Toggle memory"
+                >
+                  <span
+                    className={`pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform ${
+                      memoryStatus.memoryEnabled ? "translate-x-5" : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Stored memories</p>
+                  <p className="text-xs text-muted-foreground">
+                    {memoryStatus.memoryCount}{" "}
+                    {memoryStatus.memoryCount === 1 ? "memory" : "memories"}
+                  </p>
+                </div>
+                {memoryStatus.memoryCount > 0 && !clearConfirm && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={memoryLoading}
+                    onClick={() => setClearConfirm(true)}
+                  >
+                    Clear all
+                  </Button>
+                )}
+                {clearConfirm && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={memoryLoading}
+                      onClick={() => setClearConfirm(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={memoryLoading}
+                      onClick={handleClearMemories}
+                    >
+                      Confirm clear
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

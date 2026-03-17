@@ -14,8 +14,8 @@ import { auth, type UserType } from "@/lib/supabase/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import { checkCostLimits, recordUsage } from "@/lib/ai/usage";
 import { getVisibleModels } from "@/lib/ai/models.server";
-import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
-import { getLanguageModel } from "@/lib/ai/providers";
+import { type RequestHints, systemPrompt, memoryPrompt } from "@/lib/ai/prompts";
+import { getLanguageModel, isReasoningModel as checkIsReasoningModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
@@ -23,6 +23,7 @@ import { searchKnowledge } from "@/lib/ai/tools/search-knowledge";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { queryDatabase } from "@/lib/ai/tools/query-database";
 import { webSearch } from "@/lib/ai/tools/web-search";
+import { saveMemory } from "@/lib/ai/tools/save-memory";
 import { getMcpTools, closeMcpClients, type MCPClientHandle } from "@/lib/ai/mcp";
 import type { DbType, SshConfig } from "@/lib/rag/db-connector";
 import { isProductionEnvironment } from "@/lib/constants";
@@ -34,8 +35,10 @@ import {
   getChatById,
   getCopilotById,
   getAvailableCopilots,
+  getMemoriesByUserId,
   getMessageCountByUserId,
   getMessagesByChatId,
+  getProfileById,
   saveChat,
   saveMessages,
   updateChatTitleById,
@@ -243,10 +246,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const isReasoningModel =
-      selectedChatModel.endsWith("-thinking") ||
-      (selectedChatModel.includes("reasoning") &&
-        !selectedChatModel.includes("non-reasoning"));
+    const isReasoningModel = checkIsReasoningModel(selectedChatModel);
 
     const isKnowledgeCopilot =
       activeCopilot !== null && activeCopilot.type === "knowledge";
@@ -257,8 +257,28 @@ export async function POST(request: Request) {
     const resolvedMessages = await resolveImageUrlsForModel(uiMessages);
     const modelMessages = await convertToModelMessages(resolvedMessages);
 
+    // Fetch user profile and memories for personalisation
+    const userProfile = await getProfileById(session.user.id);
+    const memoryEnabled = userProfile?.memoryEnabled ?? true;
+
+    let memoryContext: string | null = null;
+    {
+      const memories = memoryEnabled
+        ? await getMemoriesByUserId(session.user.id, 50)
+        : [];
+      memoryContext = memoryPrompt(
+        memories.map((m) => m.content),
+        {
+          nickname: userProfile?.nickname,
+          occupation: userProfile?.occupation,
+          aboutYou: userProfile?.aboutYou,
+          customInstructions: userProfile?.customInstructions,
+        },
+      );
+    }
+
     // Build the active tools list
-    type ToolName = "getWeather" | "createDocument" | "updateDocument" | "requestSuggestions" | "searchKnowledge" | "queryDatabase" | "perplexity_search" | "image_generation";
+    type ToolName = "getWeather" | "createDocument" | "updateDocument" | "requestSuggestions" | "searchKnowledge" | "queryDatabase" | "perplexity_search" | "image_generation" | "saveMemory";
 
     // Default: web search ON for non-reasoning, image gen ON for GPT-5 non-reasoning
     const webSearchEnabled = enableWebSearch ?? !isReasoningModel;
@@ -269,7 +289,7 @@ export async function POST(request: Request) {
     const hasCopilot = activeCopilot !== null;
 
     const baseActiveTools: ToolName[] = isReasoningModel
-      ? []
+      ? ["createDocument", "updateDocument"]
       : (() => {
           const tools: ToolName[] = [];
 
@@ -280,6 +300,7 @@ export async function POST(request: Request) {
             if (imageGenEnabled && selectedChatModel.startsWith("openai/gpt-5")) {
               tools.push("image_generation");
             }
+            if (memoryEnabled) tools.push("saveMemory");
             return tools;
           }
 
@@ -295,6 +316,7 @@ export async function POST(request: Request) {
           if (copilotTools.has("imageGen") && imageGenEnabled && selectedChatModel.startsWith("openai/gpt-5")) {
             tools.push("image_generation");
           }
+          if (memoryEnabled) tools.push("saveMemory");
 
           return tools;
         })();
@@ -346,6 +368,7 @@ export async function POST(request: Request) {
             isKnowledgeCopilot,
             isDataCopilot,
             enabledTools: activeCopilot?.enabledTools,
+            memoryContext,
           }),
           messages: modelMessages,
           stopWhen: stepCountIs(5),
@@ -359,8 +382,8 @@ export async function POST(request: Request) {
             : undefined,
           tools: {
             getWeather,
-            createDocument: createDocument({ session, dataStream }),
-            updateDocument: updateDocument({ session, dataStream }),
+            createDocument: createDocument({ session, dataStream, selectedChatModel }),
+            updateDocument: updateDocument({ session, dataStream, selectedChatModel }),
             requestSuggestions: requestSuggestions({ session, dataStream }),
             perplexity_search: webSearch,
             image_generation: openai.tools.imageGeneration({ model: "gpt-image-1", quality: "medium" }) as any,
@@ -380,6 +403,9 @@ export async function POST(request: Request) {
                     ssh: sshConfig,
                   }),
                 }
+              : {}),
+            ...(memoryEnabled && !isReasoningModel
+              ? { saveMemory: saveMemory({ userId: session.user.id }) }
               : {}),
             ...mcpTools,
           },

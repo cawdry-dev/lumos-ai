@@ -1,16 +1,16 @@
 import { smoothStream, streamText } from "ai";
 import { updateDocumentPrompt } from "@/lib/ai/prompts";
-import { getArtifactModel } from "@/lib/ai/providers";
+import { getArtifactModel, getArtifactModelId } from "@/lib/ai/providers";
 import { recordUsage } from "@/lib/ai/usage";
 import { createDocumentHandler } from "@/lib/artifacts/server";
 
 export const textDocumentHandler = createDocumentHandler<"text">({
   kind: "text",
-  onCreateDocument: async ({ title, dataStream, session }) => {
+  onCreateDocument: async ({ title, dataStream, session, modelId }) => {
     let draftContent = "";
 
     const { fullStream, usage } = streamText({
-      model: getArtifactModel(),
+      model: getArtifactModel(modelId),
       system:
         "Write about the given topic. Markdown is supported. Use headings wherever appropriate.",
       experimental_transform: smoothStream({ chunking: "word" }),
@@ -38,7 +38,7 @@ export const textDocumentHandler = createDocumentHandler<"text">({
       usage.then((u) => {
         recordUsage({
           userId: session.user.id,
-          modelId: "anthropic/claude-haiku-4.5",
+          modelId: getArtifactModelId(modelId),
           promptTokens: u.inputTokens ?? 0,
           completionTokens: u.outputTokens ?? 0,
           usageType: "artifact",
@@ -48,11 +48,11 @@ export const textDocumentHandler = createDocumentHandler<"text">({
 
     return draftContent;
   },
-  onUpdateDocument: async ({ document, description, dataStream, session }) => {
+  onUpdateDocument: async ({ document, description, dataStream, session, modelId }) => {
     let draftContent = "";
 
     const { fullStream, usage } = streamText({
-      model: getArtifactModel(),
+      model: getArtifactModel(modelId),
       system: updateDocumentPrompt(document.content, "text"),
       experimental_transform: smoothStream({ chunking: "word" }),
       prompt: description,
@@ -87,7 +87,7 @@ export const textDocumentHandler = createDocumentHandler<"text">({
       usage.then((u) => {
         recordUsage({
           userId: session.user.id,
-          modelId: "anthropic/claude-haiku-4.5",
+          modelId: getArtifactModelId(modelId),
           promptTokens: u.inputTokens ?? 0,
           completionTokens: u.outputTokens ?? 0,
           usageType: "artifact",

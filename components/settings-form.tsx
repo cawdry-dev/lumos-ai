@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
@@ -16,6 +17,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
 
 const VOICES = [
@@ -32,6 +35,11 @@ type SettingsFormProps = {
   accentColour: string | null;
   ssoProvider: string | null;
   ttsVoice: string | null;
+  customInstructions: string | null;
+  nickname: string | null;
+  occupation: string | null;
+  aboutYou: string | null;
+  memoryEnabled: boolean;
 };
 
 export function SettingsForm({
@@ -39,6 +47,11 @@ export function SettingsForm({
   accentColour: initialAccentColour,
   ssoProvider,
   ttsVoice: initialTtsVoice,
+  customInstructions: initialCustomInstructions,
+  nickname: initialNickname,
+  occupation: initialOccupation,
+  aboutYou: initialAboutYou,
+  memoryEnabled: initialMemoryEnabled,
 }: SettingsFormProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
@@ -50,6 +63,17 @@ export function SettingsForm({
 
   // Voice state
   const [selectedVoice, setSelectedVoice] = useState(initialTtsVoice ?? "alloy");
+
+  // Personalisation state
+  const [customInstructions, setCustomInstructions] = useState(initialCustomInstructions ?? "");
+  const [savingCustomInstructions, setSavingCustomInstructions] = useState(false);
+  const [nickname, setNickname] = useState(initialNickname ?? "");
+  const [savingNickname, setSavingNickname] = useState(false);
+  const [occupation, setOccupation] = useState(initialOccupation ?? "");
+  const [savingOccupation, setSavingOccupation] = useState(false);
+  const [aboutYou, setAboutYou] = useState(initialAboutYou ?? "");
+  const [savingAboutYou, setSavingAboutYou] = useState(false);
+  const [memoryEnabled, setMemoryEnabled] = useState(initialMemoryEnabled);
 
   // Password state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -120,6 +144,109 @@ export function SettingsForm({
     }
   };
 
+  const handleSaveCustomInstructions = async () => {
+    setSavingCustomInstructions(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customInstructions: customInstructions || null }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Failed to save");
+      }
+      toast.success("Custom instructions updated");
+      router.refresh();
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to save custom instructions");
+    } finally {
+      setSavingCustomInstructions(false);
+    }
+  };
+
+  const handleSaveNickname = async () => {
+    setSavingNickname(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nickname: nickname || null }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Failed to save");
+      }
+      toast.success("Nickname updated");
+      router.refresh();
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to save nickname");
+    } finally {
+      setSavingNickname(false);
+    }
+  };
+
+  const handleSaveOccupation = async () => {
+    setSavingOccupation(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ occupation: occupation || null }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Failed to save");
+      }
+      toast.success("Occupation updated");
+      router.refresh();
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to save occupation");
+    } finally {
+      setSavingOccupation(false);
+    }
+  };
+
+  const handleSaveAboutYou = async () => {
+    setSavingAboutYou(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ aboutYou: aboutYou || null }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Failed to save");
+      }
+      toast.success("About you updated");
+      router.refresh();
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to save about you");
+    } finally {
+      setSavingAboutYou(false);
+    }
+  };
+
+  const handleToggleMemory = async (enabled: boolean) => {
+    setMemoryEnabled(enabled);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memoryEnabled: enabled }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Failed to save");
+      }
+      toast.success(enabled ? "Memory enabled" : "Memory disabled");
+    } catch (err: any) {
+      setMemoryEnabled(!enabled);
+      toast.error(err.message ?? "Failed to update memory setting");
+    }
+  };
+
   const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
       toast.error("Passwords do not match");
@@ -173,6 +300,120 @@ export function SettingsForm({
             </div>
             <Button onClick={handleSaveDisplayName} disabled={savingName}>
               {savingName ? "Saving…" : "Save"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Custom Instructions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Custom Instructions</CardTitle>
+          <CardDescription>
+            Share anything else you&apos;d like Lumos to consider in its
+            response.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <Label htmlFor="customInstructions" className="sr-only">
+              Custom Instructions
+            </Label>
+            <Textarea
+              id="customInstructions"
+              value={customInstructions}
+              onChange={(e) => setCustomInstructions(e.target.value)}
+              placeholder="e.g. Always respond in bullet points, keep answers concise…"
+              rows={4}
+            />
+            <Button
+              onClick={handleSaveCustomInstructions}
+              disabled={savingCustomInstructions}
+            >
+              {savingCustomInstructions ? "Saving…" : "Save"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Your Nickname */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Your Nickname</CardTitle>
+          <CardDescription>
+            What should Lumos call you?
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <Label htmlFor="nickname" className="sr-only">
+                Your Nickname
+              </Label>
+              <Input
+                id="nickname"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="Enter your nickname"
+              />
+            </div>
+            <Button onClick={handleSaveNickname} disabled={savingNickname}>
+              {savingNickname ? "Saving…" : "Save"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Your Occupation */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Your Occupation</CardTitle>
+          <CardDescription>
+            Your job title or role.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <Label htmlFor="occupation" className="sr-only">
+                Your Occupation
+              </Label>
+              <Input
+                id="occupation"
+                value={occupation}
+                onChange={(e) => setOccupation(e.target.value)}
+                placeholder="Enter your occupation"
+              />
+            </div>
+            <Button onClick={handleSaveOccupation} disabled={savingOccupation}>
+              {savingOccupation ? "Saving…" : "Save"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* More About You */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">More About You</CardTitle>
+          <CardDescription>
+            Interests, values, or preferences to keep in mind.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <Label htmlFor="aboutYou" className="sr-only">
+              More About You
+            </Label>
+            <Textarea
+              id="aboutYou"
+              value={aboutYou}
+              onChange={(e) => setAboutYou(e.target.value)}
+              placeholder="Tell Lumos about yourself…"
+              rows={4}
+            />
+            <Button onClick={handleSaveAboutYou} disabled={savingAboutYou}>
+              {savingAboutYou ? "Saving…" : "Save"}
             </Button>
           </div>
         </CardContent>
@@ -284,6 +525,39 @@ export function SettingsForm({
                 <span className="text-xs opacity-70">{v.description}</span>
               </Button>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Memory */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Memory</CardTitle>
+          <CardDescription>
+            Lumos can save and reference facts about you across conversations.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Link
+              href="/settings/memories"
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Manage memories →
+            </Link>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="memoryEnabled">Reference saved memories</Label>
+                <p className="text-sm text-muted-foreground">
+                  Lets Lumos save and use memories when responding.
+                </p>
+              </div>
+              <Switch
+                id="memoryEnabled"
+                checked={memoryEnabled}
+                onCheckedChange={handleToggleMemory}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

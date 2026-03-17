@@ -11,12 +11,13 @@ import { generateUUID } from "@/lib/utils";
 type CreateDocumentProps = {
   session: Session;
   dataStream: UIMessageStreamWriter<ChatMessage>;
+  selectedChatModel?: string;
 };
 
-export const createDocument = ({ session, dataStream }: CreateDocumentProps) =>
+export const createDocument = ({ session, dataStream, selectedChatModel }: CreateDocumentProps) =>
   tool({
     description:
-      "Create a document for a writing or content creation activities. This tool will call other functions that will generate the contents of the document based on the title and kind.",
+      "Create a document for writing or content creation activities. This tool will call other functions that will generate the contents of the document based on the title and kind. Do NOT write the document content in your response — the content is generated automatically and displayed in a separate panel.",
     inputSchema: z.object({
       title: z.string(),
       kind: z.enum(artifactKinds),
@@ -63,6 +64,7 @@ export const createDocument = ({ session, dataStream }: CreateDocumentProps) =>
           title,
           dataStream,
           session,
+          modelId: selectedChatModel,
         });
       } catch (error) {
         console.error("[createDocument] Document creation failed:", error);

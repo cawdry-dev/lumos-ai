@@ -1,17 +1,17 @@
 import { streamObject } from "ai";
 import { z } from "zod";
 import { codePrompt, updateDocumentPrompt } from "@/lib/ai/prompts";
-import { getArtifactModel } from "@/lib/ai/providers";
+import { getArtifactModel, getArtifactModelId } from "@/lib/ai/providers";
 import { recordUsage } from "@/lib/ai/usage";
 import { createDocumentHandler } from "@/lib/artifacts/server";
 
 export const codeDocumentHandler = createDocumentHandler<"code">({
   kind: "code",
-  onCreateDocument: async ({ title, dataStream, session }) => {
+  onCreateDocument: async ({ title, dataStream, session, modelId }) => {
     let draftContent = "";
 
     const { fullStream, usage } = streamObject({
-      model: getArtifactModel(),
+      model: getArtifactModel(modelId),
       system: codePrompt,
       prompt: title,
       schema: z.object({
@@ -43,7 +43,7 @@ export const codeDocumentHandler = createDocumentHandler<"code">({
       usage.then((u) => {
         recordUsage({
           userId: session.user.id,
-          modelId: "anthropic/claude-haiku-4.5",
+          modelId: getArtifactModelId(modelId),
           promptTokens: u.inputTokens ?? 0,
           completionTokens: u.outputTokens ?? 0,
           usageType: "artifact",
@@ -53,11 +53,11 @@ export const codeDocumentHandler = createDocumentHandler<"code">({
 
     return draftContent;
   },
-  onUpdateDocument: async ({ document, description, dataStream, session }) => {
+  onUpdateDocument: async ({ document, description, dataStream, session, modelId }) => {
     let draftContent = "";
 
     const { fullStream, usage } = streamObject({
-      model: getArtifactModel(),
+      model: getArtifactModel(modelId),
       system: updateDocumentPrompt(document.content, "code"),
       prompt: description,
       schema: z.object({
@@ -89,7 +89,7 @@ export const codeDocumentHandler = createDocumentHandler<"code">({
       usage.then((u) => {
         recordUsage({
           userId: session.user.id,
-          modelId: "anthropic/claude-haiku-4.5",
+          modelId: getArtifactModelId(modelId),
           promptTokens: u.inputTokens ?? 0,
           completionTokens: u.outputTokens ?? 0,
           usageType: "artifact",
