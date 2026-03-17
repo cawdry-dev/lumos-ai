@@ -17,7 +17,6 @@ export type Session = {
     accentColour: string | null;
     ttsVoice: string | null;
     customInstructions: string | null;
-    nickname: string | null;
     occupation: string | null;
     aboutYou: string | null;
     memoryEnabled: boolean;
@@ -68,7 +67,6 @@ export async function auth(): Promise<Session | null> {
         accentColour: profile.accentColour ?? null,
         ttsVoice: profile.ttsVoice ?? null,
         customInstructions: profile.customInstructions ?? null,
-        nickname: profile.nickname ?? null,
         occupation: profile.occupation ?? null,
         aboutYou: profile.aboutYou ?? null,
         memoryEnabled: profile.memoryEnabled,

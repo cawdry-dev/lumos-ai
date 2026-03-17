@@ -677,7 +677,6 @@ export async function updateProfile(
     accentColour?: string | null;
     ttsVoice?: string | null;
     customInstructions?: string | null;
-    nickname?: string | null;
     occupation?: string | null;
     aboutYou?: string | null;
     memoryEnabled?: boolean;
