@@ -1464,12 +1464,18 @@ export async function deleteModelPricing(id: string) {
 /** Finds a pricing rule by its exact model pattern. */
 export async function findPricingRuleByPattern(
   pattern: string,
+  options?: { activeOnly?: boolean },
 ): Promise<ModelPricing | null> {
   try {
+    const conditions = [eq(modelPricing.modelPattern, pattern)];
+    if (options?.activeOnly) {
+      conditions.push(eq(modelPricing.isActive, true));
+    }
+
     const [row] = await db
       .select()
       .from(modelPricing)
-      .where(eq(modelPricing.modelPattern, pattern))
+      .where(and(...conditions))
       .limit(1);
 
     return row ?? null;
