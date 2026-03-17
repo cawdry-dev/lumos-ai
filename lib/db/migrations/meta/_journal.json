@@ -148,6 +148,13 @@
       "when": 1773936000000,
       "tag": "0020_drop_nickname",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1773758787737,
+      "tag": "0021_petite_dakota_north",
+      "breakpoints": true
     }
   ]
 }
