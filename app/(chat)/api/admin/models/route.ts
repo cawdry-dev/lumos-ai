@@ -139,7 +139,7 @@ export async function PUT(request: Request) {
  */
 async function ensurePricingRuleExists(modelId: string): Promise<void> {
   // Check for an exact pricing rule
-  const existingExact = await findPricingRuleByPattern(modelId);
+  const existingExact = await findPricingRuleByPattern(modelId, { activeOnly: true });
   if (existingExact) return;
 
   // Try to create from the known defaults map
@@ -155,14 +155,24 @@ async function ensurePricingRuleExists(modelId: string): Promise<void> {
 
   // Fall back to a provider-level wildcard rule (e.g. "openai/*")
   const provider = getProviderFromModelId(modelId);
-  if (!provider) return;
+  if (!provider) {
+    console.warn(
+      `[pricing] No pricing rule could be created for model "${modelId}": unknown provider. Usage will be recorded with zero cost.`,
+    );
+    return;
+  }
 
   const wildcardPattern = `${provider}/*`;
-  const existingWildcard = await findPricingRuleByPattern(wildcardPattern);
+  const existingWildcard = await findPricingRuleByPattern(wildcardPattern, { activeOnly: true });
   if (existingWildcard) return;
 
   const wildcardPricing = PROVIDER_WILDCARD_PRICING[provider];
-  if (!wildcardPricing) return;
+  if (!wildcardPricing) {
+    console.warn(
+      `[pricing] No pricing rule could be created for model "${modelId}": no default pricing for provider "${provider}". Usage will be recorded with zero cost.`,
+    );
+    return;
+  }
 
   await createModelPricing({
     modelPattern: wildcardPattern,

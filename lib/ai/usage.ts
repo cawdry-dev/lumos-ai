@@ -78,6 +78,11 @@ export async function recordUsage(params: {
   try {
     const pricingRules = await getActiveModelPricing();
     const pricing = findPricingForModel(params.modelId, pricingRules);
+    if (!pricing) {
+      console.warn(
+        `[usage] No pricing rule found for model "${params.modelId}". Cost will be recorded as 0.`,
+      );
+    }
     const totalTokens = params.promptTokens + params.completionTokens;
     const estimatedCostCents = calculateCostCents(
       params.promptTokens,

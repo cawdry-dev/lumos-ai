@@ -61,3 +61,27 @@ export function getProviderFromModelId(modelId: string): string | null {
   return slashIndex > 0 ? modelId.slice(0, slashIndex) : null;
 }
 
+export type PricingSeed = {
+  modelPattern: string;
+  promptPricePer1kTokens: string;
+  completionPricePer1kTokens: string;
+};
+
+/**
+ * Combined list of all default pricing seeds (exact models + provider wildcards)
+ * in a flat array format suitable for the admin UI seeding flow.
+ *
+ * This is the single source of truth — derived from DEFAULT_MODEL_PRICING
+ * and PROVIDER_WILDCARD_PRICING above.
+ */
+export const DEFAULT_PRICING_SEEDS: PricingSeed[] = [
+  // Exact model entries
+  ...Object.entries(DEFAULT_MODEL_PRICING).map(
+    ([modelPattern, entry]) => ({ modelPattern, ...entry }),
+  ),
+  // Provider wildcard fallbacks
+  ...Object.entries(PROVIDER_WILDCARD_PRICING).map(
+    ([provider, entry]) => ({ modelPattern: `${provider}/*`, ...entry }),
+  ),
+];
+
