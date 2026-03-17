@@ -1318,7 +1318,7 @@ export async function getUsageStats({
         totalPromptTokens: sql<number>`COALESCE(SUM(${tokenUsage.promptTokens}), 0)::int`,
         totalCompletionTokens: sql<number>`COALESCE(SUM(${tokenUsage.completionTokens}), 0)::int`,
         totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
-        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::float`,
         date: sql<string>`DATE(${tokenUsage.createdAt})`.as("date"),
       })
       .from(tokenUsage)
@@ -1358,7 +1358,7 @@ export async function getUsagePeriodTotals({ from, to }: { from: Date; to: Date 
         totalPromptTokens: sql<number>`COALESCE(SUM(${tokenUsage.promptTokens}), 0)::int`,
         totalCompletionTokens: sql<number>`COALESCE(SUM(${tokenUsage.completionTokens}), 0)::int`,
         totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
-        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::float`,
       })
       .from(tokenUsage)
       .where(and(gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)));
@@ -1380,7 +1380,7 @@ export async function getUsageByUser({ from, to }: { from: Date; to: Date }) {
         totalPromptTokens: sql<number>`COALESCE(SUM(${tokenUsage.promptTokens}), 0)::int`,
         totalCompletionTokens: sql<number>`COALESCE(SUM(${tokenUsage.completionTokens}), 0)::int`,
         totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
-        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::float`,
         requestCount: count(),
       })
       .from(tokenUsage)
@@ -1401,7 +1401,7 @@ export async function getUsageByModel({ from, to }: { from: Date; to: Date }) {
         totalPromptTokens: sql<number>`COALESCE(SUM(${tokenUsage.promptTokens}), 0)::int`,
         totalCompletionTokens: sql<number>`COALESCE(SUM(${tokenUsage.completionTokens}), 0)::int`,
         totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
-        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::float`,
         requestCount: count(),
       })
       .from(tokenUsage)
@@ -1422,7 +1422,7 @@ export async function getUsageByCopilot({ from, to }: { from: Date; to: Date }) 
         totalPromptTokens: sql<number>`COALESCE(SUM(${tokenUsage.promptTokens}), 0)::int`,
         totalCompletionTokens: sql<number>`COALESCE(SUM(${tokenUsage.completionTokens}), 0)::int`,
         totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
-        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::float`,
       })
       .from(tokenUsage)
       .leftJoin(copilot, eq(tokenUsage.copilotId, copilot.id))
@@ -1440,7 +1440,7 @@ export async function getUsageByType({ from, to }: { from: Date; to: Date }) {
       .select({
         usageType: tokenUsage.usageType,
         totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
-        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::float`,
         requestCount: count(),
       })
       .from(tokenUsage)
@@ -1459,7 +1459,7 @@ export async function getUsageDailySeries({ from, to }: { from: Date; to: Date }
         date: sql<string>`DATE(${tokenUsage.createdAt})`.as("date"),
         totalPromptTokens: sql<number>`COALESCE(SUM(${tokenUsage.promptTokens}), 0)::int`,
         totalCompletionTokens: sql<number>`COALESCE(SUM(${tokenUsage.completionTokens}), 0)::int`,
-        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::float`,
       })
       .from(tokenUsage)
       .where(and(gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)))
@@ -1483,7 +1483,7 @@ export async function getUserCostForPeriod({
   try {
     const [row] = await db
       .select({
-        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::float`,
         totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
       })
       .from(tokenUsage)
@@ -1710,6 +1710,7 @@ export async function insertTokenUsage(data: {
       .insert(tokenUsage)
       .values({
         ...data,
+        estimatedCostCents: String(data.estimatedCostCents),
         createdAt: new Date(),
       })
       .returning();
@@ -2031,7 +2032,7 @@ export async function getUserUsageDetail({
         totalPromptTokens: sql<number>`COALESCE(SUM(${tokenUsage.promptTokens}), 0)::int`,
         totalCompletionTokens: sql<number>`COALESCE(SUM(${tokenUsage.completionTokens}), 0)::int`,
         totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
-        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::float`,
         date: sql<string>`DATE(${tokenUsage.createdAt})`.as("date"),
       })
       .from(tokenUsage)
@@ -2080,7 +2081,7 @@ export async function getUserUsageLog({
         promptTokens: tokenUsage.promptTokens,
         completionTokens: tokenUsage.completionTokens,
         totalTokens: tokenUsage.totalTokens,
-        estimatedCostCents: tokenUsage.estimatedCostCents,
+        estimatedCostCents: sql<number>`${tokenUsage.estimatedCostCents}::float`,
         createdAt: tokenUsage.createdAt,
       })
       .from(tokenUsage)
@@ -2100,6 +2101,79 @@ export async function getUserUsageLog({
     throw new ChatbotError(
       "bad_request:database",
       "Failed to get user usage log",
+    );
+  }
+}
+
+
+// ---------------------------------------------------------------------------
+// Backfill: zero-cost usage rows
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches a batch of TokenUsage rows where estimatedCostCents is 0 but
+ * totalTokens > 0 (i.e. rows that should have a cost but don't).
+ */
+export async function getZeroCostUsageRows({
+  limit: lim,
+  offset,
+}: {
+  limit: number;
+  offset: number;
+}) {
+  try {
+    return await db
+      .select({
+        id: tokenUsage.id,
+        modelId: tokenUsage.modelId,
+        promptTokens: tokenUsage.promptTokens,
+        completionTokens: tokenUsage.completionTokens,
+      })
+      .from(tokenUsage)
+      .where(
+        and(
+          eq(tokenUsage.estimatedCostCents, "0"),
+          gt(tokenUsage.totalTokens, 0),
+        ),
+      )
+      .orderBy(tokenUsage.id)
+      .limit(lim)
+      .offset(offset);
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to fetch zero-cost usage rows",
+    );
+  }
+}
+
+/**
+ * Batch-updates estimatedCostCents for the given TokenUsage row IDs.
+ * Each entry maps an ID to its recalculated cost.
+ */
+export async function batchUpdateUsageCosts(
+  updates: { id: string; estimatedCostCents: number }[],
+) {
+  if (updates.length === 0) return;
+
+  try {
+    // Build a single UPDATE … SET … FROM (VALUES …) statement for efficiency
+    const values = updates
+      .map((u) => `('${u.id}'::uuid, ${u.estimatedCostCents})`)
+      .join(", ");
+
+    await db.execute(
+      sql.raw(
+        `UPDATE "TokenUsage" AS t
+         SET "estimatedCostCents" = v.cost
+         FROM (VALUES ${values}) AS v(id, cost)
+         WHERE t.id = v.id`,
+      ),
+    );
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to batch-update usage costs",
     );
   }
 }
