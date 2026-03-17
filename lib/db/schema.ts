@@ -404,7 +404,7 @@ export const tokenUsage = pgTable(
     completionTokens: integer("completionTokens").notNull().default(0),
     totalTokens: integer("totalTokens").notNull().default(0),
     /** Estimated cost in cents (pence), calculated from model pricing. */
-    estimatedCostCents: integer("estimatedCostCents").notNull().default(0),
+    estimatedCostCents: numeric("estimatedCostCents").notNull().default("0"),
     /** The type of AI call that generated this usage. */
     usageType: varchar("usageType", {
       length: 20,

@@ -9,6 +9,11 @@ import {
   insertTokenUsage,
 } from "@/lib/db/queries";
 import type { ModelPricing } from "@/lib/db/schema";
+import {
+  DEFAULT_MODEL_PRICING,
+  PROVIDER_WILDCARD_PRICING,
+  getProviderFromModelId,
+} from "./pricing-defaults";
 
 // ---------------------------------------------------------------------------
 // Model pricing lookup
@@ -55,7 +60,7 @@ export function calculateCostCents(
   const completionCost =
     (completionTokens / 1000) * Number(pricing.completionPricePer1kTokens);
 
-  return Math.round(promptCost + completionCost);
+  return promptCost + completionCost;
 }
 
 // ---------------------------------------------------------------------------
@@ -77,17 +82,44 @@ export async function recordUsage(params: {
 }): Promise<void> {
   try {
     const pricingRules = await getActiveModelPricing();
-    const pricing = findPricingForModel(params.modelId, pricingRules);
+    let pricing: ModelPricing | null = findPricingForModel(params.modelId, pricingRules);
+
+    // Fallback to hardcoded defaults when no DB pricing rule matches
+    let fallbackPricing: { promptPricePer1kTokens: string; completionPricePer1kTokens: string } | null = null;
     if (!pricing) {
-      console.warn(
-        `[usage] No pricing rule found for model "${params.modelId}". Cost will be recorded as 0.`,
-      );
+      // 1. Try exact match against default model pricing
+      const exactDefault = DEFAULT_MODEL_PRICING[params.modelId];
+      if (exactDefault) {
+        fallbackPricing = exactDefault;
+      } else {
+        // 2. Try provider wildcard fallback
+        const provider = getProviderFromModelId(params.modelId);
+        if (provider) {
+          const wildcardDefault = PROVIDER_WILDCARD_PRICING[provider];
+          if (wildcardDefault) {
+            fallbackPricing = wildcardDefault;
+          }
+        }
+      }
+
+      if (!fallbackPricing) {
+        console.warn(
+          `[usage] No pricing rule found for model "${params.modelId}". Cost will be recorded as 0.`,
+        );
+      }
     }
+
     const totalTokens = params.promptTokens + params.completionTokens;
+
+    // Use DB pricing if available, otherwise use the hardcoded fallback
+    const effectivePricing = pricing ?? (fallbackPricing
+      ? ({ promptPricePer1kTokens: fallbackPricing.promptPricePer1kTokens, completionPricePer1kTokens: fallbackPricing.completionPricePer1kTokens } as ModelPricing)
+      : null);
+
     const estimatedCostCents = calculateCostCents(
       params.promptTokens,
       params.completionTokens,
-      pricing,
+      effectivePricing,
     );
 
     await insertTokenUsage({
