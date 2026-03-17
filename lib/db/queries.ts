@@ -1350,6 +1350,126 @@ export async function getUsageStats({
   }
 }
 
+/** Period totals: aggregate prompt, completion, total tokens and cost. */
+export async function getUsagePeriodTotals({ from, to }: { from: Date; to: Date }) {
+  try {
+    const [row] = await db
+      .select({
+        totalPromptTokens: sql<number>`COALESCE(SUM(${tokenUsage.promptTokens}), 0)::int`,
+        totalCompletionTokens: sql<number>`COALESCE(SUM(${tokenUsage.completionTokens}), 0)::int`,
+        totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+      })
+      .from(tokenUsage)
+      .where(and(gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)));
+
+    return row ?? { totalPromptTokens: 0, totalCompletionTokens: 0, totalTokens: 0, totalCostCents: 0 };
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to get usage period totals");
+  }
+}
+
+/** Usage aggregated by user with request count. */
+export async function getUsageByUser({ from, to }: { from: Date; to: Date }) {
+  try {
+    return await db
+      .select({
+        userId: tokenUsage.userId,
+        email: user.email,
+        displayName: user.displayName,
+        totalPromptTokens: sql<number>`COALESCE(SUM(${tokenUsage.promptTokens}), 0)::int`,
+        totalCompletionTokens: sql<number>`COALESCE(SUM(${tokenUsage.completionTokens}), 0)::int`,
+        totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+        requestCount: count(),
+      })
+      .from(tokenUsage)
+      .innerJoin(user, eq(tokenUsage.userId, user.id))
+      .where(and(gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)))
+      .groupBy(tokenUsage.userId, user.email, user.displayName);
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to get usage by user");
+  }
+}
+
+/** Usage aggregated by model with request count. */
+export async function getUsageByModel({ from, to }: { from: Date; to: Date }) {
+  try {
+    return await db
+      .select({
+        modelId: tokenUsage.modelId,
+        totalPromptTokens: sql<number>`COALESCE(SUM(${tokenUsage.promptTokens}), 0)::int`,
+        totalCompletionTokens: sql<number>`COALESCE(SUM(${tokenUsage.completionTokens}), 0)::int`,
+        totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+        requestCount: count(),
+      })
+      .from(tokenUsage)
+      .where(and(gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)))
+      .groupBy(tokenUsage.modelId);
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to get usage by model");
+  }
+}
+
+/** Usage aggregated by copilot. */
+export async function getUsageByCopilot({ from, to }: { from: Date; to: Date }) {
+  try {
+    return await db
+      .select({
+        copilotId: tokenUsage.copilotId,
+        copilotName: sql<string>`COALESCE(${copilot.name}, 'General')`,
+        totalPromptTokens: sql<number>`COALESCE(SUM(${tokenUsage.promptTokens}), 0)::int`,
+        totalCompletionTokens: sql<number>`COALESCE(SUM(${tokenUsage.completionTokens}), 0)::int`,
+        totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+      })
+      .from(tokenUsage)
+      .leftJoin(copilot, eq(tokenUsage.copilotId, copilot.id))
+      .where(and(gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)))
+      .groupBy(tokenUsage.copilotId, copilot.name);
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to get usage by copilot");
+  }
+}
+
+/** Usage aggregated by usage type with request count. */
+export async function getUsageByType({ from, to }: { from: Date; to: Date }) {
+  try {
+    return await db
+      .select({
+        usageType: tokenUsage.usageType,
+        totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+        requestCount: count(),
+      })
+      .from(tokenUsage)
+      .where(and(gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)))
+      .groupBy(tokenUsage.usageType);
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to get usage by type");
+  }
+}
+
+/** Daily time series of token usage and cost. */
+export async function getUsageDailySeries({ from, to }: { from: Date; to: Date }) {
+  try {
+    return await db
+      .select({
+        date: sql<string>`DATE(${tokenUsage.createdAt})`.as("date"),
+        totalPromptTokens: sql<number>`COALESCE(SUM(${tokenUsage.promptTokens}), 0)::int`,
+        totalCompletionTokens: sql<number>`COALESCE(SUM(${tokenUsage.completionTokens}), 0)::int`,
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+      })
+      .from(tokenUsage)
+      .where(and(gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)))
+      .groupBy(sql`DATE(${tokenUsage.createdAt})`)
+      .orderBy(sql`DATE(${tokenUsage.createdAt})`);
+  } catch (_error) {
+    throw new ChatbotError("bad_request:database", "Failed to get usage daily series");
+  }
+}
+
 /** Returns the user's total cost for a given period. */
 export async function getUserCostForPeriod({
   userId: uid,
@@ -1860,6 +1980,126 @@ export async function getMemoryCount(userId: string) {
     throw new ChatbotError(
       "bad_request:database",
       "Failed to get memory count",
+    );
+  }
+}
+
+
+// ---------------------------------------------------------------------------
+// Per-user usage detail (admin drill-down)
+// ---------------------------------------------------------------------------
+
+/** Returns a single user's info for the detail header. */
+export async function getUserById(uid: string) {
+  try {
+    const [row] = await db
+      .select({
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        role: user.role,
+        dailyCostLimitCents: user.dailyCostLimitCents,
+        monthlyCostLimitCents: user.monthlyCostLimitCents,
+      })
+      .from(user)
+      .where(eq(user.id, uid));
+
+    return row ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get user by id",
+    );
+  }
+}
+
+/** Returns aggregated usage stats for a single user (same shape as getUsageStats but filtered). */
+export async function getUserUsageDetail({
+  userId: uid,
+  from,
+  to,
+}: {
+  userId: string;
+  from: Date;
+  to: Date;
+}) {
+  try {
+    const rows = await db
+      .select({
+        modelId: tokenUsage.modelId,
+        usageType: tokenUsage.usageType,
+        totalPromptTokens: sql<number>`COALESCE(SUM(${tokenUsage.promptTokens}), 0)::int`,
+        totalCompletionTokens: sql<number>`COALESCE(SUM(${tokenUsage.completionTokens}), 0)::int`,
+        totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::int`,
+        date: sql<string>`DATE(${tokenUsage.createdAt})`.as("date"),
+      })
+      .from(tokenUsage)
+      .where(
+        and(
+          eq(tokenUsage.userId, uid),
+          gte(tokenUsage.createdAt, from),
+          lt(tokenUsage.createdAt, to),
+        ),
+      )
+      .groupBy(
+        tokenUsage.modelId,
+        tokenUsage.usageType,
+        sql`DATE(${tokenUsage.createdAt})`,
+      );
+
+    return rows;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get user usage detail",
+    );
+  }
+}
+
+/** Returns individual usage records for a user (paginated, most recent first). */
+export async function getUserUsageLog({
+  userId: uid,
+  from,
+  to,
+  limit: lim = 50,
+  offset = 0,
+}: {
+  userId: string;
+  from: Date;
+  to: Date;
+  limit?: number;
+  offset?: number;
+}) {
+  try {
+    const rows = await db
+      .select({
+        id: tokenUsage.id,
+        modelId: tokenUsage.modelId,
+        usageType: tokenUsage.usageType,
+        promptTokens: tokenUsage.promptTokens,
+        completionTokens: tokenUsage.completionTokens,
+        totalTokens: tokenUsage.totalTokens,
+        estimatedCostCents: tokenUsage.estimatedCostCents,
+        createdAt: tokenUsage.createdAt,
+      })
+      .from(tokenUsage)
+      .where(
+        and(
+          eq(tokenUsage.userId, uid),
+          gte(tokenUsage.createdAt, from),
+          lt(tokenUsage.createdAt, to),
+        ),
+      )
+      .orderBy(desc(tokenUsage.createdAt))
+      .limit(lim)
+      .offset(offset);
+
+    return rows;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get user usage log",
     );
   }
 }
