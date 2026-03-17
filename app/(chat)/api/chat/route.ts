@@ -354,6 +354,11 @@ export async function POST(request: Request) {
       ? `\n\n${mcpInstructions.join("\n\n")}`
       : "";
 
+    // Map to capture base64 image data from provider-defined image_generation
+    // tool results in onStepFinish, keyed by toolCallId. This data is then
+    // used in onFinish to upload to Supabase Storage before persisting.
+    const capturedImageData = new Map<string, string>();
+
     const stream = createUIMessageStream({
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
       execute: async ({ writer: dataStream }) => {
@@ -415,6 +420,25 @@ export async function POST(request: Request) {
           },
           onStepFinish: ({ finishReason, toolCalls, toolResults, text }) => {
             console.log(`[chat] Step finished: finishReason=${finishReason} toolCalls=${toolCalls.length} toolResults=${toolResults.length} textLength=${text.length}`);
+
+            // Capture base64 image data from provider-defined image_generation
+            // tool results before it gets lost in the UI message stream
+            // conversion (which only passes through a text summary).
+            for (const tr of toolResults) {
+              if (
+                tr &&
+                tr.toolName === "image_generation" &&
+                tr.output &&
+                typeof (tr.output as { result?: string }).result === "string" &&
+                (tr.output as { result: string }).result.length > 1000
+              ) {
+                console.log(`[chat] Captured image_generation base64 for toolCallId=${tr.toolCallId} (${(tr.output as { result: string }).result.length} chars)`);
+                capturedImageData.set(
+                  tr.toolCallId,
+                  (tr.output as { result: string }).result,
+                );
+              }
+            }
           },
         });
 
@@ -446,6 +470,28 @@ export async function POST(request: Request) {
         // Close MCP clients now that the stream is done
         if (mcpClients.length > 0) {
           await closeMcpClients(mcpClients);
+        }
+
+        // Inject captured base64 image data into message parts before upload.
+        // Provider-defined tools (like openai.tools.imageGeneration) only pass
+        // a text summary ("Generated image") through the UI message stream,
+        // so the actual base64 data captured in onStepFinish needs to be
+        // patched back into the parts here.
+        if (capturedImageData.size > 0) {
+          for (const msg of finishedMessages) {
+            for (const part of msg.parts) {
+              if (
+                part.type === "tool-image_generation" &&
+                part.state === "output-available" &&
+                part.toolCallId &&
+                capturedImageData.has(part.toolCallId)
+              ) {
+                const base64 = capturedImageData.get(part.toolCallId)!;
+                console.log(`[chat] Injecting captured base64 into tool part toolCallId=${part.toolCallId}`);
+                (part as any).output = { result: base64 };
+              }
+            }
+          }
         }
 
         // Upload generated images to Supabase Storage and replace base64
