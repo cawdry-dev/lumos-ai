@@ -1,7 +1,7 @@
 import { streamObject } from "ai";
 import { z } from "zod";
 import { updateDocumentPrompt } from "@/lib/ai/prompts";
-import { getArtifactModel } from "@/lib/ai/providers";
+import { getArtifactModel, getArtifactModelId } from "@/lib/ai/providers";
 import { recordUsage } from "@/lib/ai/usage";
 import { createDocumentHandler } from "@/lib/artifacts/server";
 
@@ -20,11 +20,11 @@ const chartSchema = z.object({
 
 export const chartDocumentHandler = createDocumentHandler<"chart">({
   kind: "chart",
-  onCreateDocument: async ({ title, dataStream, session }) => {
+  onCreateDocument: async ({ title, dataStream, session, modelId }) => {
     let draftContent = "";
 
     const { fullStream, usage } = streamObject({
-      model: getArtifactModel(),
+      model: getArtifactModel(modelId),
       system:
         "Generate a chart specification as JSON based on the user's request. " +
         "Return an object with type (bar, line, pie, area, or scatter), data (array of objects), " +
@@ -60,7 +60,7 @@ export const chartDocumentHandler = createDocumentHandler<"chart">({
       usage.then((u) => {
         recordUsage({
           userId: session.user.id,
-          modelId: "anthropic/claude-haiku-4.5",
+          modelId: getArtifactModelId(modelId),
           promptTokens: u.inputTokens ?? 0,
           completionTokens: u.outputTokens ?? 0,
           usageType: "artifact",
@@ -70,11 +70,11 @@ export const chartDocumentHandler = createDocumentHandler<"chart">({
 
     return draftContent;
   },
-  onUpdateDocument: async ({ document, description, dataStream, session }) => {
+  onUpdateDocument: async ({ document, description, dataStream, session, modelId }) => {
     let draftContent = "";
 
     const { fullStream, usage } = streamObject({
-      model: getArtifactModel(),
+      model: getArtifactModel(modelId),
       system: updateDocumentPrompt(document.content, "chart"),
       prompt: description,
       schema: chartSchema,
@@ -99,7 +99,7 @@ export const chartDocumentHandler = createDocumentHandler<"chart">({
       usage.then((u) => {
         recordUsage({
           userId: session.user.id,
-          modelId: "anthropic/claude-haiku-4.5",
+          modelId: getArtifactModelId(modelId),
           promptTokens: u.inputTokens ?? 0,
           completionTokens: u.outputTokens ?? 0,
           usageType: "artifact",

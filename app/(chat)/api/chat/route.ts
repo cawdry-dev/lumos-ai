@@ -289,7 +289,7 @@ export async function POST(request: Request) {
     const hasCopilot = activeCopilot !== null;
 
     const baseActiveTools: ToolName[] = isReasoningModel
-      ? []
+      ? ["createDocument", "updateDocument"]
       : (() => {
           const tools: ToolName[] = [];
 
@@ -382,8 +382,8 @@ export async function POST(request: Request) {
             : undefined,
           tools: {
             getWeather,
-            createDocument: createDocument({ session, dataStream }),
-            updateDocument: updateDocument({ session, dataStream }),
+            createDocument: createDocument({ session, dataStream, selectedChatModel }),
+            updateDocument: updateDocument({ session, dataStream, selectedChatModel }),
             requestSuggestions: requestSuggestions({ session, dataStream }),
             perplexity_search: webSearch,
             image_generation: openai.tools.imageGeneration({ model: "gpt-image-1", quality: "medium" }) as any,

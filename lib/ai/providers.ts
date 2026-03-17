@@ -76,9 +76,15 @@ export function getTitleModel() {
   return gateway.languageModel("google/gemini-2.5-flash-lite");
 }
 
-export function getArtifactModel() {
+const DEFAULT_ARTIFACT_MODEL = "anthropic/claude-haiku-4.5";
+
+export function getArtifactModel(modelId?: string) {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel("artifact-model");
   }
-  return gateway.languageModel("anthropic/claude-haiku-4.5");
+  return gateway.languageModel(modelId ?? DEFAULT_ARTIFACT_MODEL);
+}
+
+export function getArtifactModelId(modelId?: string): string {
+  return modelId ?? DEFAULT_ARTIFACT_MODEL;
 }
