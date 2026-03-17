@@ -426,6 +426,7 @@ export async function POST(request: Request) {
             // conversion (which only passes through a text summary).
             for (const tr of toolResults) {
               if (
+                tr &&
                 tr.toolName === "image_generation" &&
                 tr.output &&
                 typeof (tr.output as { result?: string }).result === "string" &&
