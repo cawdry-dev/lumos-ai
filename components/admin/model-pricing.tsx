@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pencil, Plus, Trash2 } from "lucide-react";
+import { DEFAULT_PRICING_SEEDS } from "@/lib/ai/pricing-defaults";
 
 type PricingRule = {
   id: string;
@@ -24,28 +25,6 @@ type PricingRule = {
   isActive: boolean;
   updatedAt: string;
 };
-
-/** Default pricing seeds for common models. */
-const DEFAULT_SEEDS: Omit<PricingRule, "id" | "isActive" | "updatedAt">[] = [
-  // OpenAI
-  { modelPattern: "openai/gpt-4.1", promptPricePer1kTokens: "0.2", completionPricePer1kTokens: "0.8" },
-  { modelPattern: "openai/gpt-4.1-mini", promptPricePer1kTokens: "0.04", completionPricePer1kTokens: "0.16" },
-  { modelPattern: "openai/gpt-4.1-nano", promptPricePer1kTokens: "0.01", completionPricePer1kTokens: "0.04" },
-  { modelPattern: "openai/gpt-5-mini", promptPricePer1kTokens: "0.15", completionPricePer1kTokens: "0.6" },
-  // Anthropic
-  { modelPattern: "anthropic/claude-sonnet-4.6", promptPricePer1kTokens: "0.3", completionPricePer1kTokens: "1.5" },
-  { modelPattern: "anthropic/claude-haiku-4.5", promptPricePer1kTokens: "0.08", completionPricePer1kTokens: "0.4" },
-  // Google
-  { modelPattern: "google/gemini-2.5-flash-lite", promptPricePer1kTokens: "0.0075", completionPricePer1kTokens: "0.03" },
-  { modelPattern: "google/gemini-3-pro-preview", promptPricePer1kTokens: "0.125", completionPricePer1kTokens: "0.5" },
-  // xAI
-  { modelPattern: "xai/grok-4.1-fast-non-reasoning", promptPricePer1kTokens: "0.3", completionPricePer1kTokens: "1.0" },
-  // Provider wildcard fallbacks (conservative mid-range pricing)
-  { modelPattern: "openai/*", promptPricePer1kTokens: "0.1", completionPricePer1kTokens: "0.4" },
-  { modelPattern: "anthropic/*", promptPricePer1kTokens: "0.15", completionPricePer1kTokens: "0.75" },
-  { modelPattern: "google/*", promptPricePer1kTokens: "0.05", completionPricePer1kTokens: "0.2" },
-  { modelPattern: "xai/*", promptPricePer1kTokens: "0.2", completionPricePer1kTokens: "0.8" },
-];
 
 export function ModelPricingManager() {
   const [rules, setRules] = useState<PricingRule[]>([]);
@@ -151,7 +130,7 @@ export function ModelPricingManager() {
 
   const seedDefaults = async () => {
     try {
-      for (const seed of DEFAULT_SEEDS) {
+      for (const seed of DEFAULT_PRICING_SEEDS) {
         await fetch("/api/admin/pricing", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
