@@ -60,8 +60,6 @@ export const user = pgTable("User", {
   ttsVoice: varchar("ttsVoice", { length: 20 }),
   /** Custom instructions for the AI to follow. */
   customInstructions: text("customInstructions"),
-  /** User's preferred nickname for the AI to use. */
-  nickname: varchar("nickname", { length: 100 }),
   /** User's occupation/role. */
   occupation: varchar("occupation", { length: 100 }),
   /** Additional info about the user. */

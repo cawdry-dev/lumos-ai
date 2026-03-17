@@ -94,7 +94,7 @@ You are a data co-pilot that answers questions by querying a connected database.
 export const memoryPrompt = (
   memories: string[],
   personalisation: {
-    nickname?: string | null;
+    displayName?: string | null;
     occupation?: string | null;
     aboutYou?: string | null;
     customInstructions?: string | null;
@@ -104,8 +104,8 @@ export const memoryPrompt = (
 
   // Personalisation
   const personParts: string[] = [];
-  if (personalisation.nickname)
-    personParts.push(`- Name/nickname: ${personalisation.nickname}`);
+  if (personalisation.displayName)
+    personParts.push(`- Name: ${personalisation.displayName}`);
   if (personalisation.occupation)
     personParts.push(`- Occupation: ${personalisation.occupation}`);
   if (personalisation.aboutYou)

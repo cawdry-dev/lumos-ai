@@ -141,6 +141,13 @@
       "when": 1773847200000,
       "tag": "0019_add_memory_and_personalisation",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1773936000000,
+      "tag": "0020_drop_nickname",
+      "breakpoints": true
     }
   ]
 }

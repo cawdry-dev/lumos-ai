@@ -28,7 +28,6 @@ export async function GET() {
       ssoProvider: profile.ssoProvider,
       ttsVoice: profile.ttsVoice,
       customInstructions: profile.customInstructions,
-      nickname: profile.nickname,
       occupation: profile.occupation,
       aboutYou: profile.aboutYou,
       memoryEnabled: profile.memoryEnabled,
@@ -62,7 +61,6 @@ export async function PATCH(request: Request) {
     accentColour?: string;
     ttsVoice?: string;
     customInstructions?: string | null;
-    nickname?: string | null;
     occupation?: string | null;
     aboutYou?: string | null;
     memoryEnabled?: boolean;
@@ -79,7 +77,6 @@ export async function PATCH(request: Request) {
     accentColour,
     ttsVoice,
     customInstructions,
-    nickname,
     occupation,
     aboutYou,
     memoryEnabled,
@@ -126,18 +123,6 @@ export async function PATCH(request: Request) {
     );
   }
 
-  // Validate nickname if provided
-  if (
-    nickname !== undefined &&
-    nickname !== null &&
-    (typeof nickname !== "string" || nickname.length > 100)
-  ) {
-    return Response.json(
-      { error: "nickname must be a string of at most 100 characters." },
-      { status: 400 },
-    );
-  }
-
   // Validate occupation if provided
   if (
     occupation !== undefined &&
@@ -176,7 +161,6 @@ export async function PATCH(request: Request) {
       ...(accentColour !== undefined ? { accentColour } : {}),
       ...(ttsVoice !== undefined ? { ttsVoice } : {}),
       ...(customInstructions !== undefined ? { customInstructions } : {}),
-      ...(nickname !== undefined ? { nickname } : {}),
       ...(occupation !== undefined ? { occupation } : {}),
       ...(aboutYou !== undefined ? { aboutYou } : {}),
       ...(memoryEnabled !== undefined ? { memoryEnabled } : {}),

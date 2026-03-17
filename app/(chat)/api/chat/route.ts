@@ -269,7 +269,7 @@ export async function POST(request: Request) {
       memoryContext = memoryPrompt(
         memories.map((m) => m.content),
         {
-          nickname: userProfile?.nickname,
+          displayName: userProfile?.displayName,
           occupation: userProfile?.occupation,
           aboutYou: userProfile?.aboutYou,
           customInstructions: userProfile?.customInstructions,

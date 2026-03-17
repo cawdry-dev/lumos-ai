@@ -36,7 +36,6 @@ type SettingsFormProps = {
   ssoProvider: string | null;
   ttsVoice: string | null;
   customInstructions: string | null;
-  nickname: string | null;
   occupation: string | null;
   aboutYou: string | null;
   memoryEnabled: boolean;
@@ -48,7 +47,6 @@ export function SettingsForm({
   ssoProvider,
   ttsVoice: initialTtsVoice,
   customInstructions: initialCustomInstructions,
-  nickname: initialNickname,
   occupation: initialOccupation,
   aboutYou: initialAboutYou,
   memoryEnabled: initialMemoryEnabled,
@@ -67,8 +65,6 @@ export function SettingsForm({
   // Personalisation state
   const [customInstructions, setCustomInstructions] = useState(initialCustomInstructions ?? "");
   const [savingCustomInstructions, setSavingCustomInstructions] = useState(false);
-  const [nickname, setNickname] = useState(initialNickname ?? "");
-  const [savingNickname, setSavingNickname] = useState(false);
   const [occupation, setOccupation] = useState(initialOccupation ?? "");
   const [savingOccupation, setSavingOccupation] = useState(false);
   const [aboutYou, setAboutYou] = useState(initialAboutYou ?? "");
@@ -162,27 +158,6 @@ export function SettingsForm({
       toast.error(err.message ?? "Failed to save custom instructions");
     } finally {
       setSavingCustomInstructions(false);
-    }
-  };
-
-  const handleSaveNickname = async () => {
-    setSavingNickname(true);
-    try {
-      const res = await fetch("/api/settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nickname: nickname || null }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "Failed to save");
-      }
-      toast.success("Nickname updated");
-      router.refresh();
-    } catch (err: any) {
-      toast.error(err.message ?? "Failed to save nickname");
-    } finally {
-      setSavingNickname(false);
     }
   };
 
@@ -336,33 +311,7 @@ export function SettingsForm({
         </CardContent>
       </Card>
 
-      {/* Your Nickname */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">Your Nickname</CardTitle>
-          <CardDescription>
-            What should Lumos call you?
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <Label htmlFor="nickname" className="sr-only">
-                Your Nickname
-              </Label>
-              <Input
-                id="nickname"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                placeholder="Enter your nickname"
-              />
-            </div>
-            <Button onClick={handleSaveNickname} disabled={savingNickname}>
-              {savingNickname ? "Saving…" : "Save"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* Your Occupation */}
       <Card>

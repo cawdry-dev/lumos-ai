@@ -193,7 +193,6 @@ test.describe("PATCH /api/settings (memory fields)", () => {
 
     const patchRes = await api.patch("/api/settings", {
       data: {
-        nickname: `TestNick-${uniqueSuffix}`,
         occupation: `Tester-${uniqueSuffix}`,
         aboutYou: `About me ${uniqueSuffix}`,
         customInstructions: `Instructions ${uniqueSuffix}`,
@@ -201,7 +200,6 @@ test.describe("PATCH /api/settings (memory fields)", () => {
     });
     expect(patchRes.status()).toBe(200);
     const updated = await patchRes.json();
-    expect(updated.nickname).toBe(`TestNick-${uniqueSuffix}`);
     expect(updated.occupation).toBe(`Tester-${uniqueSuffix}`);
     expect(updated.aboutYou).toBe(`About me ${uniqueSuffix}`);
     expect(updated.customInstructions).toBe(`Instructions ${uniqueSuffix}`);
@@ -209,7 +207,6 @@ test.describe("PATCH /api/settings (memory fields)", () => {
     // Clean up — reset to null
     await api.patch("/api/settings", {
       data: {
-        nickname: null,
         occupation: null,
         aboutYou: null,
         customInstructions: null,
