@@ -1,5 +1,6 @@
 import type { Geo } from "@vercel/functions";
 import type { ArtifactKind } from "@/components/artifact";
+import { isReasoningModel as checkIsReasoningModel } from "@/lib/ai/providers";
 
 export const artifactsPrompt = `
 Artifacts is a special user interface mode that helps users with writing, editing, and other content creation tasks. When artifact is open, it is on the right side of the screen, while the conversation is on the left side. When creating or updating documents, changes are reflected in real-time on the artifacts and visible to the user.
@@ -90,6 +91,45 @@ You are a data co-pilot that answers questions by querying a connected database.
 - If the schema is large, query only the tables relevant to the user's question.
 - When presenting numerical data, include units and context where possible.`;
 
+export const memoryPrompt = (
+  memories: string[],
+  personalisation: {
+    nickname?: string | null;
+    occupation?: string | null;
+    aboutYou?: string | null;
+    customInstructions?: string | null;
+  },
+) => {
+  const parts: string[] = [];
+
+  // Personalisation
+  const personParts: string[] = [];
+  if (personalisation.nickname)
+    personParts.push(`- Name/nickname: ${personalisation.nickname}`);
+  if (personalisation.occupation)
+    personParts.push(`- Occupation: ${personalisation.occupation}`);
+  if (personalisation.aboutYou)
+    personParts.push(`- About them: ${personalisation.aboutYou}`);
+
+  if (personParts.length > 0) {
+    parts.push(`About the user:\n${personParts.join("\n")}`);
+  }
+
+  if (personalisation.customInstructions) {
+    parts.push(
+      `User's custom instructions:\n${personalisation.customInstructions}`,
+    );
+  }
+
+  if (memories.length > 0) {
+    parts.push(
+      `Saved memories about this user:\n${memories.map((m) => `- ${m}`).join("\n")}\n\nUse these memories to personalise your responses. You can save new memories using the saveMemory tool when the user shares important facts, preferences, or context.`,
+    );
+  }
+
+  return parts.length > 0 ? parts.join("\n\n") : null;
+};
+
 export const systemPrompt = ({
   selectedChatModel,
   requestHints,
@@ -97,6 +137,7 @@ export const systemPrompt = ({
   isKnowledgeCopilot,
   isDataCopilot,
   enabledTools,
+  memoryContext,
 }: {
   selectedChatModel: string;
   requestHints: RequestHints;
@@ -104,6 +145,7 @@ export const systemPrompt = ({
   isKnowledgeCopilot?: boolean;
   isDataCopilot?: boolean;
   enabledTools?: string[] | null;
+  memoryContext?: string | null;
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
 
@@ -115,11 +157,14 @@ export const systemPrompt = ({
   }
 
   parts.push(regularPrompt);
+
+  if (memoryContext) {
+    parts.push(memoryContext);
+  }
+
   parts.push(requestPrompt);
 
-  const isReasoningModel =
-    selectedChatModel.includes("reasoning") ||
-    selectedChatModel.includes("thinking");
+  const isReasoningModel = checkIsReasoningModel(selectedChatModel);
 
   const hasCopilot = isKnowledgeCopilot || isDataCopilot;
   const toolSet = new Set(enabledTools ?? []);

@@ -19,6 +19,11 @@ export default async function SettingsPage() {
         accentColour={session.user.accentColour}
         ssoProvider={session.user.ssoProvider}
         ttsVoice={session.user.ttsVoice}
+        customInstructions={session.user.customInstructions}
+        nickname={session.user.nickname}
+        occupation={session.user.occupation}
+        aboutYou={session.user.aboutYou}
+        memoryEnabled={session.user.memoryEnabled}
       />
     </div>
   );

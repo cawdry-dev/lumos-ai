@@ -58,6 +58,16 @@ export const user = pgTable("User", {
   accentColour: varchar("accentColour", { length: 7 }),
   /** User-chosen TTS voice for text-to-speech playback. */
   ttsVoice: varchar("ttsVoice", { length: 20 }),
+  /** Custom instructions for the AI to follow. */
+  customInstructions: text("customInstructions"),
+  /** User's preferred nickname for the AI to use. */
+  nickname: varchar("nickname", { length: 100 }),
+  /** User's occupation/role. */
+  occupation: varchar("occupation", { length: 100 }),
+  /** Additional info about the user. */
+  aboutYou: text("aboutYou"),
+  /** Whether the AI should save and reference memories. */
+  memoryEnabled: boolean("memoryEnabled").notNull().default(true),
 }, (table) => ({
   invitedByRef: foreignKey({
     columns: [table.invitedBy],
@@ -456,3 +466,19 @@ export const allowedDomain = pgTable("AllowedDomain", {
 });
 
 export type AllowedDomain = InferSelectModel<typeof allowedDomain>;
+
+// ---------------------------------------------------------------------------
+// Per-user memory
+// ---------------------------------------------------------------------------
+
+/** Stores individual memories the AI has saved about a user. */
+export const memory = pgTable("Memory", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => user.id),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").notNull(),
+});
+
+export type Memory = InferSelectModel<typeof memory>;

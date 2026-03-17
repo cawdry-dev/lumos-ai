@@ -27,6 +27,11 @@ export async function GET() {
       accentColour: profile.accentColour,
       ssoProvider: profile.ssoProvider,
       ttsVoice: profile.ttsVoice,
+      customInstructions: profile.customInstructions,
+      nickname: profile.nickname,
+      occupation: profile.occupation,
+      aboutYou: profile.aboutYou,
+      memoryEnabled: profile.memoryEnabled,
     });
   } catch (error) {
     console.error("Failed to get profile:", error);
@@ -52,7 +57,16 @@ export async function PATCH(request: Request) {
     );
   }
 
-  let body: { displayName?: string; accentColour?: string; ttsVoice?: string };
+  let body: {
+    displayName?: string;
+    accentColour?: string;
+    ttsVoice?: string;
+    customInstructions?: string | null;
+    nickname?: string | null;
+    occupation?: string | null;
+    aboutYou?: string | null;
+    memoryEnabled?: boolean;
+  };
 
   try {
     body = await request.json();
@@ -60,7 +74,16 @@ export async function PATCH(request: Request) {
     return Response.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { displayName, accentColour, ttsVoice } = body;
+  const {
+    displayName,
+    accentColour,
+    ttsVoice,
+    customInstructions,
+    nickname,
+    occupation,
+    aboutYou,
+    memoryEnabled,
+  } = body;
 
   // Validate accentColour if provided
   if (
@@ -91,11 +114,72 @@ export async function PATCH(request: Request) {
     );
   }
 
+  // Validate customInstructions if provided
+  if (
+    customInstructions !== undefined &&
+    customInstructions !== null &&
+    (typeof customInstructions !== "string" || customInstructions.length > 2000)
+  ) {
+    return Response.json(
+      { error: "customInstructions must be a string of at most 2000 characters." },
+      { status: 400 },
+    );
+  }
+
+  // Validate nickname if provided
+  if (
+    nickname !== undefined &&
+    nickname !== null &&
+    (typeof nickname !== "string" || nickname.length > 100)
+  ) {
+    return Response.json(
+      { error: "nickname must be a string of at most 100 characters." },
+      { status: 400 },
+    );
+  }
+
+  // Validate occupation if provided
+  if (
+    occupation !== undefined &&
+    occupation !== null &&
+    (typeof occupation !== "string" || occupation.length > 100)
+  ) {
+    return Response.json(
+      { error: "occupation must be a string of at most 100 characters." },
+      { status: 400 },
+    );
+  }
+
+  // Validate aboutYou if provided
+  if (
+    aboutYou !== undefined &&
+    aboutYou !== null &&
+    (typeof aboutYou !== "string" || aboutYou.length > 2000)
+  ) {
+    return Response.json(
+      { error: "aboutYou must be a string of at most 2000 characters." },
+      { status: 400 },
+    );
+  }
+
+  // Validate memoryEnabled if provided
+  if (memoryEnabled !== undefined && typeof memoryEnabled !== "boolean") {
+    return Response.json(
+      { error: "memoryEnabled must be a boolean." },
+      { status: 400 },
+    );
+  }
+
   try {
     const updated = await updateProfile(session.user.id, {
       ...(displayName !== undefined ? { displayName } : {}),
       ...(accentColour !== undefined ? { accentColour } : {}),
       ...(ttsVoice !== undefined ? { ttsVoice } : {}),
+      ...(customInstructions !== undefined ? { customInstructions } : {}),
+      ...(nickname !== undefined ? { nickname } : {}),
+      ...(occupation !== undefined ? { occupation } : {}),
+      ...(aboutYou !== undefined ? { aboutYou } : {}),
+      ...(memoryEnabled !== undefined ? { memoryEnabled } : {}),
     });
 
     return Response.json(updated);

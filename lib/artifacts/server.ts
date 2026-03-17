@@ -22,6 +22,7 @@ export type CreateDocumentCallbackProps = {
   title: string;
   dataStream: UIMessageStreamWriter<ChatMessage>;
   session: Session;
+  modelId?: string;
 };
 
 export type UpdateDocumentCallbackProps = {
@@ -29,6 +30,7 @@ export type UpdateDocumentCallbackProps = {
   description: string;
   dataStream: UIMessageStreamWriter<ChatMessage>;
   session: Session;
+  modelId?: string;
 };
 
 export type DocumentHandler<T = ArtifactKind> = {
@@ -53,6 +55,7 @@ export function createDocumentHandler<T extends ArtifactKind>(config: {
           title: args.title,
           dataStream: args.dataStream,
           session: args.session,
+          modelId: args.modelId,
         });
       } catch (error) {
         console.error(
@@ -94,6 +97,7 @@ export function createDocumentHandler<T extends ArtifactKind>(config: {
           description: args.description,
           dataStream: args.dataStream,
           session: args.session,
+          modelId: args.modelId,
         });
       } catch (error) {
         console.error(

@@ -8,6 +8,7 @@ import {
   eq,
   gt,
   gte,
+  ilike,
   inArray,
   isNull,
   lt,
@@ -36,6 +37,7 @@ import {
   knowledgeDocument,
   type KnowledgeDocument,
   type McpServerConfig,
+  memory,
   message,
   modelPricing,
   type ModelPricing,
@@ -667,13 +669,18 @@ export async function getProfileById(
   }
 }
 
-/** Updates a user's profile (display name, accent colour, TTS voice). */
+/** Updates a user's profile (display name, accent colour, TTS voice, personalisation). */
 export async function updateProfile(
   id: string,
   data: {
     displayName?: string | null;
     accentColour?: string | null;
     ttsVoice?: string | null;
+    customInstructions?: string | null;
+    nickname?: string | null;
+    occupation?: string | null;
+    aboutYou?: string | null;
+    memoryEnabled?: boolean;
   },
 ) {
   try {
@@ -1741,6 +1748,119 @@ export async function deleteAllowedDomain(id: string) {
     throw new ChatbotError(
       "bad_request:database",
       "Failed to delete allowed domain",
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Memory queries
+// ---------------------------------------------------------------------------
+
+/** Get all memories for a user, ordered by most recent first. */
+export async function getMemoriesByUserId(userId: string, limit = 50) {
+  try {
+    return await db
+      .select()
+      .from(memory)
+      .where(eq(memory.userId, userId))
+      .orderBy(desc(memory.createdAt))
+      .limit(limit);
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get memories by user id",
+    );
+  }
+}
+
+/** Create a new memory for a user. */
+export async function createMemory(userId: string, content: string) {
+  try {
+    const [created] = await db
+      .insert(memory)
+      .values({
+        userId,
+        content,
+        createdAt: new Date(),
+      })
+      .returning();
+
+    return created;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to create memory",
+    );
+  }
+}
+
+/** Delete a specific memory (must belong to the user). */
+export async function deleteMemory(id: string, userId: string) {
+  try {
+    const [deleted] = await db
+      .delete(memory)
+      .where(and(eq(memory.id, id), eq(memory.userId, userId)))
+      .returning();
+
+    return deleted ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to delete memory",
+    );
+  }
+}
+
+/** Search memories by content (case-insensitive ILIKE). */
+export async function searchMemories(userId: string, query: string, limit = 50) {
+  try {
+    return await db
+      .select()
+      .from(memory)
+      .where(
+        and(
+          eq(memory.userId, userId),
+          ilike(memory.content, `%${query}%`),
+        ),
+      )
+      .orderBy(desc(memory.createdAt))
+      .limit(limit);
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to search memories",
+    );
+  }
+}
+
+/** Delete all memories for a user. */
+export async function deleteAllMemoriesByUserId(userId: string) {
+  try {
+    return await db
+      .delete(memory)
+      .where(eq(memory.userId, userId));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to delete all memories by user id",
+    );
+  }
+}
+
+/** Count memories for a user. */
+export async function getMemoryCount(userId: string) {
+  try {
+    const [result] = await db
+      .select({ count: count(memory.id) })
+      .from(memory)
+      .where(eq(memory.userId, userId))
+      .execute();
+
+    return result?.count ?? 0;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get memory count",
     );
   }
 }

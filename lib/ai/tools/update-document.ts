@@ -8,9 +8,10 @@ import type { ChatMessage } from "@/lib/types";
 type UpdateDocumentProps = {
   session: Session;
   dataStream: UIMessageStreamWriter<ChatMessage>;
+  selectedChatModel?: string;
 };
 
-export const updateDocument = ({ session, dataStream }: UpdateDocumentProps) =>
+export const updateDocument = ({ session, dataStream, selectedChatModel }: UpdateDocumentProps) =>
   tool({
     description: "Update a document with the given description.",
     inputSchema: z.object({
@@ -49,6 +50,7 @@ export const updateDocument = ({ session, dataStream }: UpdateDocumentProps) =>
           description,
           dataStream,
           session,
+          modelId: selectedChatModel,
         });
       } catch (error) {
         console.error("[updateDocument] Document update failed:", error);
