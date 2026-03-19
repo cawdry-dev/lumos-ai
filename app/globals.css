@@ -453,6 +453,46 @@
   background-attachment: fixed;
 }
 
+/* ── Glass table rows ── */
+.glass-table-row {
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+.glass-table-row:hover {
+  background: rgb(var(--org-primary-rgb) / 0.04);
+  box-shadow: inset 0 0 0 1px rgb(var(--org-primary-rgb) / 0.06);
+}
+.dark .glass-table-row:hover {
+  background: rgb(var(--org-primary-rgb) / 0.08);
+  box-shadow: inset 0 0 0 1px rgb(var(--org-primary-rgb) / 0.10);
+}
+
+/* ── Glass table header ── */
+.glass-table-header {
+  background: var(--glass-bg-subtle);
+  backdrop-filter: blur(8px);
+}
+
+/* ── Luminous divider ── */
+.glass-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(var(--org-primary-rgb) / 0.15),
+    rgb(var(--org-secondary-rgb) / 0.10),
+    transparent
+  );
+}
+.dark .glass-divider {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(var(--org-primary-rgb) / 0.20),
+    rgb(var(--org-secondary-rgb) / 0.15),
+    transparent
+  );
+}
+
 /* Admin shell glass panel override */
 .admin-shell .glass {
   background:
@@ -628,6 +668,154 @@
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.35),
     0 0 0 1px rgb(255 255 255 / 0.05);
+}
+
+/* ── Chat glass utilities ── */
+
+/* User message bubble: accent-tinted glass */
+.chat-bubble-user {
+  background: rgb(var(--org-primary-rgb) / 0.85);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  box-shadow:
+    0 2px 12px rgb(var(--org-primary-rgb) / 0.25),
+    inset 0 1px 0 rgb(255 255 255 / 0.15);
+  color: white;
+}
+.dark .chat-bubble-user {
+  background: rgb(var(--org-primary-rgb) / 0.75);
+  box-shadow:
+    0 2px 16px rgb(var(--org-primary-rgb) / 0.3),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+}
+
+/* Assistant avatar: glass circle */
+.chat-avatar-glass {
+  background: var(--glass-bg-subtle);
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    var(--glass-inner-highlight),
+    0 2px 8px oklch(0 0 0 / 0.06);
+}
+.dark .chat-avatar-glass {
+  box-shadow:
+    var(--glass-inner-highlight),
+    0 2px 8px oklch(0 0 0 / 0.2);
+}
+
+/* Chat header: thin glass bar with bottom glow */
+.chat-header-glass {
+  background:
+    linear-gradient(180deg, var(--glass-bg-strong) 0%, var(--glass-bg-light) 100%);
+  backdrop-filter: blur(calc(var(--glass-blur) + 4px)) saturate(var(--glass-saturation));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 4px)) saturate(var(--glass-saturation));
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow:
+    0 1px 8px oklch(0 0 0 / 0.04),
+    0 4px 16px rgb(var(--org-primary-rgb) / 0.03);
+}
+.dark .chat-header-glass {
+  box-shadow:
+    0 1px 8px oklch(0 0 0 / 0.15),
+    0 4px 16px rgb(var(--org-primary-rgb) / 0.06);
+}
+
+/* Chat input: floating glass panel */
+.chat-input-glass {
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(calc(var(--glass-blur) + 8px)) saturate(calc(var(--glass-saturation) + 0.2));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 8px)) saturate(calc(var(--glass-saturation) + 0.2));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-elevated), var(--glass-inner-highlight);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.chat-input-glass:focus-within {
+  border-color: rgb(var(--org-primary-rgb) / 0.25);
+  box-shadow:
+    var(--glass-shadow-elevated),
+    0 0 20px rgb(var(--org-primary-rgb) / 0.08);
+}
+.dark .chat-input-glass:focus-within {
+  border-color: rgb(var(--org-primary-rgb) / 0.35);
+  box-shadow:
+    var(--glass-shadow-elevated),
+    0 0 24px rgb(var(--org-primary-rgb) / 0.12);
+}
+
+/* Chat toolbar ghost button */
+.chat-ghost-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.chat-ghost-btn:hover {
+  background: rgb(var(--org-primary-rgb) / 0.06);
+  border-color: rgb(var(--org-primary-rgb) / 0.10);
+  box-shadow: 0 0 8px rgb(var(--org-primary-rgb) / 0.06);
+}
+.dark .chat-ghost-btn:hover {
+  background: rgb(var(--org-primary-rgb) / 0.10);
+  border-color: rgb(var(--org-primary-rgb) / 0.15);
+  box-shadow: 0 0 8px rgb(var(--org-primary-rgb) / 0.10);
+}
+
+/* Send button: accent glass with pulse when ready */
+.chat-send-btn {
+  background: rgb(var(--org-primary-rgb) / 0.9);
+  box-shadow: 0 2px 12px rgb(var(--org-primary-rgb) / 0.3);
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+.chat-send-btn:hover:not(:disabled) {
+  background: rgb(var(--org-primary-rgb));
+  box-shadow: 0 4px 16px rgb(var(--org-primary-rgb) / 0.4);
+  transform: scale(1.05);
+}
+.chat-send-btn:disabled {
+  background: oklch(0.7 0 0 / 0.3);
+  box-shadow: none;
+}
+.dark .chat-send-btn:disabled {
+  background: oklch(0.3 0 0 / 0.4);
+}
+
+@keyframes chat-send-pulse {
+  0%, 100% { box-shadow: 0 2px 12px rgb(var(--org-primary-rgb) / 0.3); }
+  50% { box-shadow: 0 2px 20px rgb(var(--org-primary-rgb) / 0.5); }
+}
+.chat-send-ready {
+  animation: chat-send-pulse 2s ease-in-out infinite;
+}
+
+/* Copilot / greeting glass card */
+.chat-glass-card {
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), var(--glass-inner-highlight);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.chat-glass-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--glass-shadow-elevated), var(--glass-inner-highlight);
+  border-color: rgb(var(--org-primary-rgb) / 0.15);
+}
+.chat-glass-card[data-selected="true"] {
+  border-color: rgb(var(--org-primary-rgb) / 0.3);
+  box-shadow:
+    var(--glass-shadow),
+    0 0 16px rgb(var(--org-primary-rgb) / 0.10);
+}
+
+/* Glass pill (subtitle badge) */
+.glass-pill {
+  background: var(--glass-bg-subtle);
+  backdrop-filter: blur(8px) saturate(1.2);
+  -webkit-backdrop-filter: blur(8px) saturate(1.2);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-inner-highlight);
 }
 
 /* ── Landing page animations ── */
