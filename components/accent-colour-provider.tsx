@@ -7,6 +7,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { useOrgPath } from "@/lib/org-url";
 
 const DEFAULT_ACCENT = "#6366f1";
 const LS_KEY = "accent-colour";
@@ -89,6 +90,7 @@ export function AccentColourProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const buildPath = useOrgPath();
   const [accentColour, setAccentColourState] = useState(DEFAULT_ACCENT);
 
   // Read from localStorage on mount, then try to fetch from profile
@@ -102,7 +104,7 @@ export function AccentColourProvider({
     }
 
     // Fetch accent colour from profile for cross-device sync
-    fetch("/api/settings")
+    fetch(buildPath("/api/settings"))
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.accentColour && /^#[0-9a-fA-F]{6}$/.test(data.accentColour)) {

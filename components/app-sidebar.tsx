@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { Settings } from "lucide-react";
+import { useOrgPath } from "@/lib/org-url";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
@@ -45,10 +46,11 @@ export function AppSidebar({
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
   const { mutate } = useSWRConfig();
+  const buildPath = useOrgPath();
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
 
   const handleDeleteAll = () => {
-    const deletePromise = fetch("/api/history", {
+    const deletePromise = fetch(buildPath("/api/history"), {
       method: "DELETE",
     });
 
@@ -57,7 +59,7 @@ export function AppSidebar({
       success: () => {
         mutate(unstable_serialize(getChatHistoryPaginationKey));
         setShowDeleteAllDialog(false);
-        router.replace("/");
+        router.replace(buildPath("/"));
         router.refresh();
         return "All chats deleted successfully";
       },
@@ -73,7 +75,7 @@ export function AppSidebar({
             <div className="flex flex-row items-center justify-between">
               <Link
                 className="flex flex-row items-center gap-3"
-                href="/"
+                href={buildPath("/")}
                 onClick={() => {
                   setOpenMobile(false);
                 }}
@@ -106,7 +108,7 @@ export function AppSidebar({
                       className="sidebar-glass-ghost h-8 rounded-lg p-1 md:h-fit md:p-2"
                       onClick={() => {
                         setOpenMobile(false);
-                        router.push("/");
+                        router.push(buildPath("/"));
                         router.refresh();
                       }}
                       type="button"
@@ -129,7 +131,7 @@ export function AppSidebar({
         {userRole === "admin" && (
           <div className="border-t border-border/10 px-2 py-2">
             <Link
-              href="/admin"
+              href={buildPath("/admin")}
               className="sidebar-glass-hover flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-muted-foreground hover:text-foreground"
             >
               <Settings className="h-4 w-4" />

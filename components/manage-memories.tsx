@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Plus, Search, Trash2 } from "lucide-react";
+import { useOrgPath } from "@/lib/org-url";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ type Memory = {
 };
 
 export function ManageMemories() {
+  const buildPath = useOrgPath();
   const [memories, setMemories] = useState<Memory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -35,7 +37,7 @@ export function ManageMemories() {
 
   const fetchMemories = useCallback(async () => {
     try {
-      const res = await fetch("/api/memories");
+      const res = await fetch(buildPath("/api/memories"));
       if (!res.ok) throw new Error("Failed to load memories");
       const data = await res.json();
       setMemories(data);
@@ -56,7 +58,7 @@ export function ManageMemories() {
 
     setSaving(true);
     try {
-      const res = await fetch("/api/memories", {
+      const res = await fetch(buildPath("/api/memories"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: trimmed }),
@@ -84,7 +86,7 @@ export function ManageMemories() {
 
     setDeleting(true);
     try {
-      const res = await fetch("/api/memories", {
+      const res = await fetch(buildPath("/api/memories"), {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: deleteTarget.id }),
@@ -111,7 +113,7 @@ export function ManageMemories() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/settings">
+          <Link href={buildPath("/settings")}>
             <ArrowLeft className="size-5" />
           </Link>
         </Button>

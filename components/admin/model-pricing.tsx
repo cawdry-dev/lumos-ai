@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useOrgPath } from "@/lib/org-url";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +28,7 @@ type PricingRule = {
 };
 
 export function ModelPricingManager() {
+  const buildPath = useOrgPath();
   const [rules, setRules] = useState<PricingRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -39,7 +41,7 @@ export function ModelPricingManager() {
 
   const fetchRules = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/pricing");
+      const res = await fetch(buildPath("/api/admin/pricing"));
       if (!res.ok) {
         toast({ type: "error", description: "Failed to load pricing rules." });
         return;
@@ -81,7 +83,7 @@ export function ModelPricingManager() {
 
     try {
       if (editingRule) {
-        const res = await fetch("/api/admin/pricing", {
+        const res = await fetch(buildPath("/api/admin/pricing"), {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -94,7 +96,7 @@ export function ModelPricingManager() {
         if (!res.ok) throw new Error();
         toast({ type: "success", description: "Pricing rule updated." });
       } else {
-        const res = await fetch("/api/admin/pricing", {
+        const res = await fetch(buildPath("/api/admin/pricing"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -115,7 +117,7 @@ export function ModelPricingManager() {
 
   const handleDelete = async (id: string) => {
     try {
-      const res = await fetch("/api/admin/pricing", {
+      const res = await fetch(buildPath("/api/admin/pricing"), {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
@@ -131,7 +133,7 @@ export function ModelPricingManager() {
   const seedDefaults = async () => {
     try {
       for (const seed of DEFAULT_PRICING_SEEDS) {
-        await fetch("/api/admin/pricing", {
+        await fetch(buildPath("/api/admin/pricing"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(seed),

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useOrgPath } from "@/lib/org-url";
 import {
   Area,
   AreaChart,
@@ -169,6 +170,7 @@ function computeRange(
 // ---------------------------------------------------------------------------
 
 export function UsageDashboard() {
+  const buildPath = useOrgPath();
   const [data, setData] = useState<UsageSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [pricingOpen, setPricingOpen] = useState(false);
@@ -188,7 +190,7 @@ export function UsageDashboard() {
       const to = new Date(toDate);
       to.setDate(to.getDate() + 1); // Include the end date
       const res = await fetch(
-        `/api/admin/usage/summary?from=${from.toISOString()}&to=${to.toISOString()}`,
+        buildPath(`/api/admin/usage/summary?from=${from.toISOString()}&to=${to.toISOString()}`),
       );
       if (!res.ok) {
         toast({ type: "error", description: "Failed to load usage data." });
@@ -532,7 +534,7 @@ export function UsageDashboard() {
                       <tr key={u.userId} className="glass-table-row border-b last:border-0">
                         <td className="py-2 pr-4">
                           <Link
-                            href={`/admin/usage/${u.userId}`}
+                            href={buildPath(`/admin/usage/${u.userId}`)}
                             className="text-primary hover:underline"
                           >
                             {u.displayName ?? u.email}
@@ -929,7 +931,7 @@ export function UsageDashboard() {
                 <CardTitle className="text-lg">Active pricing rules</CardTitle>
               </CollapsibleTrigger>
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/admin/pricing">
+                <Link href={buildPath("/admin/pricing")}>
                   <ExternalLink className="mr-1 size-3" />
                   Manage pricing
                 </Link>

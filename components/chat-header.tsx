@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { memo } from "react";
+import { useOrgPath } from "@/lib/org-url";
 import { useWindowSize } from "usehooks-ts";
 import { SidebarToggle } from "@/components/sidebar-toggle";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ function PureChatHeader({
 }) {
   const router = useRouter();
   const { open } = useSidebar();
+  const buildPath = useOrgPath();
 
   const { width: windowWidth } = useWindowSize();
 
@@ -31,7 +33,7 @@ function PureChatHeader({
         <Button
           className="order-2 ml-auto h-8 px-2 md:order-1 md:ml-0 md:h-fit md:px-2"
           onClick={() => {
-            router.push("/");
+            router.push(buildPath("/"));
             router.refresh();
           }}
           variant="outline"

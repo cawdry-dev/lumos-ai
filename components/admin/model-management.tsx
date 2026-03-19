@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useOrgPath } from "@/lib/org-url";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +37,7 @@ function groupByProvider(models: ChatModel[]): Record<string, ChatModel[]> {
 }
 
 export function ModelManagement({ models }: { models: ChatModel[] }) {
+  const buildPath = useOrgPath();
   const [enabledIds, setEnabledIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
@@ -54,7 +56,7 @@ export function ModelManagement({ models }: { models: ChatModel[] }) {
   useEffect(() => {
     async function fetchEnabled() {
       try {
-        const res = await fetch("/api/admin/models");
+        const res = await fetch(buildPath("/api/admin/models"));
         if (!res.ok) {
           toast({ type: "error", description: "Failed to load model settings." });
           return;
@@ -75,7 +77,7 @@ export function ModelManagement({ models }: { models: ChatModel[] }) {
       setTogglingIds((prev) => new Set(prev).add(modelId));
 
       try {
-        const res = await fetch("/api/admin/models", {
+        const res = await fetch(buildPath("/api/admin/models"), {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ modelId, enabled: !currentlyEnabled }),

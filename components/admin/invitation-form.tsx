@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
+import { useOrgPath } from "@/lib/org-url";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/select";
 
 export function InvitationForm() {
+  const buildPath = useOrgPath();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("editor");
@@ -30,7 +32,7 @@ export function InvitationForm() {
     setIsSubmitting(true);
 
     try {
-      const res = await fetch("/api/admin/invitations", {
+      const res = await fetch(buildPath("/api/admin/invitations"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), role, displayName: displayName.trim() || undefined }),

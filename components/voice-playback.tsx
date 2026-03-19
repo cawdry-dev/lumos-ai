@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useOrgPath } from "@/lib/org-url";
 import { cn } from "@/lib/utils";
 import { Action } from "./elements/actions";
 
@@ -11,6 +12,7 @@ type VoicePlaybackProps = {
 };
 
 export function VoicePlayback({ messageText, chatId }: VoicePlaybackProps) {
+  const buildPath = useOrgPath();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -41,7 +43,7 @@ export function VoicePlayback({ messageText, chatId }: VoicePlaybackProps) {
     abortRef.current = controller;
 
     try {
-      const response = await fetch("/api/voice/speak", {
+      const response = await fetch(buildPath("/api/voice/speak"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: messageText, chatId }),

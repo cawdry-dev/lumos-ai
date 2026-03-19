@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useOrgPath } from "@/lib/org-url";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import {
@@ -22,8 +23,10 @@ type VoiceRecorderProps = {
 export function VoiceRecorder({
   onTranscription,
   chatId,
+
   disabled = false,
 }: VoiceRecorderProps) {
+  const buildPath = useOrgPath();
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -84,7 +87,7 @@ export function VoiceRecorder({
             formData.append("chatId", chatId);
           }
 
-          const response = await fetch("/api/voice/transcribe", {
+          const response = await fetch(buildPath("/api/voice/transcribe"), {
             method: "POST",
             body: formData,
           });

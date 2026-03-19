@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useOrgPath } from "@/lib/org-url";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,13 +39,14 @@ const STATUS_BADGE: Record<
 };
 
 export function KnowledgeDocuments({ copilotId }: { copilotId: string }) {
+  const buildPath = useOrgPath();
   const [documents, setDocuments] = useState<KnowledgeDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchDocuments = useCallback(async () => {
     try {
-      const res = await fetch(`/api/copilots/${copilotId}/documents`);
+      const res = await fetch(buildPath(`/api/copilots/${copilotId}/documents`));
       if (!res.ok) {
         toast({ type: "error", description: "Failed to load documents." });
         return;
@@ -75,7 +77,7 @@ export function KnowledgeDocuments({ copilotId }: { copilotId: string }) {
     setDeletingId(documentId);
     try {
       const res = await fetch(
-        `/api/copilots/${copilotId}/documents/${documentId}`,
+        buildPath(`/api/copilots/${copilotId}/documents/${documentId}`),
         { method: "DELETE" },
       );
       if (!res.ok) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useOrgPath } from "@/lib/org-url";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 
@@ -15,13 +16,15 @@ type InvitationRow = {
 export function PendingInvitations({
   invitations: initialInvitations,
 }: {
+
   invitations: InvitationRow[];
 }) {
+  const buildPath = useOrgPath();
   const [invitations, setInvitations] = useState(initialInvitations);
 
   const handleRevoke = async (id: string) => {
     try {
-      const res = await fetch("/api/admin/invitations", {
+      const res = await fetch(buildPath("/api/admin/invitations"), {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),

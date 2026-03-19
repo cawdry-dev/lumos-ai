@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { memo } from "react";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
+import { useOrgPath } from "@/lib/org-url";
 import type { ChatWithCopilot } from "@/lib/db/queries";
 import {
   CheckCircleFillIcon,
@@ -37,6 +38,7 @@ const PureChatItem = ({
   onDelete: (chatId: string) => void;
   setOpenMobile: (open: boolean) => void;
 }) => {
+  const buildPath = useOrgPath();
   const { visibilityType, setVisibilityType } = useChatVisibility({
     chatId: chat.id,
     initialVisibilityType: chat.visibility,
@@ -45,7 +47,7 @@ const PureChatItem = ({
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild isActive={isActive}>
-        <Link href={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)}>
+        <Link href={buildPath(`/chat/${chat.id}`)} onClick={() => setOpenMobile(false)}>
           {chat.copilotId && (chat.copilotEmoji || chat.copilotName) && (
             <span
               className="mr-1 inline-flex shrink-0 items-center rounded bg-muted px-1 text-[10px] font-medium text-muted-foreground"

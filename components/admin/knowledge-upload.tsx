@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { useOrgPath } from "@/lib/org-url";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
@@ -17,10 +18,12 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 export function KnowledgeUpload({
   copilotId,
   onUploaded,
+
 }: {
   copilotId: string;
   onUploaded: () => void;
 }) {
+  const buildPath = useOrgPath();
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -49,7 +52,7 @@ export function KnowledgeUpload({
         const formData = new FormData();
         formData.append("file", file);
 
-        const res = await fetch(`/api/copilots/${copilotId}/documents`, {
+        const res = await fetch(buildPath(`/api/copilots/${copilotId}/documents`), {
           method: "POST",
           body: formData,
         });
