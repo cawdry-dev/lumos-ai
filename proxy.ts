@@ -1,6 +1,26 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "./lib/supabase/middleware";
 
+/**
+ * Paths that never require organisation context.
+ * Auth-related flows, the org picker, and health checks bypass org checks.
+ */
+const ORG_BYPASS_PREFIXES = ["/login", "/register", "/auth", "/mfa", "/no-access", "/org/select", "/ping"];
+
+/** Returns true if the pathname should skip org-context validation. */
+function isOrgBypassPath(pathname: string): boolean {
+  return ORG_BYPASS_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+/**
+ * Extracts the org slug from a URL path of the form `/org/{slug}/...`.
+ * Returns null when the path does not match the org-scoped pattern.
+ */
+function extractOrgSlug(pathname: string): string | null {
+  const match = pathname.match(/^\/org\/([^/]+)/);
+  return match?.[1] ?? null;
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -123,6 +143,76 @@ export async function proxy(request: NextRequest) {
         }
       }
     }
+
+    // -----------------------------------------------------------------------
+    // Organisation context — extract slug from URL and validate membership
+    // -----------------------------------------------------------------------
+    if (!isOrgBypassPath(pathname)) {
+      const orgSlug = extractOrgSlug(pathname);
+
+      if (!orgSlug) {
+        // No org slug in the URL — check for a saved cookie
+        const cookieSlug = request.cookies.get("orgSlug")?.value;
+
+        if (cookieSlug) {
+          // Redirect to the org-scoped version of the current path
+          const orgUrl = new URL(`/org/${cookieSlug}${pathname}`, request.url);
+          orgUrl.search = request.nextUrl.search;
+          return NextResponse.redirect(orgUrl);
+        }
+
+        // No cookie either — send the user to the org picker
+        if (pathname.startsWith("/api/")) {
+          return NextResponse.json(
+            { error: "Organisation context required." },
+            { status: 400 }
+          );
+        }
+        return NextResponse.redirect(new URL("/org/select", request.url));
+      }
+
+      // Validate that the user is a member of the organisation
+      const { data: membership } = await supabase
+        .from("OrganisationMember")
+        .select("orgId")
+        .eq("userId", user.id)
+        .eq("orgId", (
+          await supabase
+            .from("Organisation")
+            .select("id")
+            .eq("slug", orgSlug)
+            .maybeSingle()
+        ).data?.id ?? "")
+        .maybeSingle();
+
+      if (!membership) {
+        // Check if the user is a global admin (they can access any org)
+        const { data: userRow } = await supabase
+          .from("User")
+          .select("isGlobalAdmin")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!userRow?.isGlobalAdmin) {
+          if (pathname.startsWith("/api/")) {
+            return NextResponse.json(
+              { error: "Not a member of this organisation." },
+              { status: 403 }
+            );
+          }
+          return NextResponse.redirect(new URL("/org/select", request.url));
+        }
+      }
+
+      // Persist the org slug in a cookie for subsequent requests
+      supabaseResponse.cookies.set("orgSlug", orgSlug, {
+        path: "/",
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+      });
+    }
   }
 
   // MFA pages: redirect to home if user already has AAL2 or is exempt
@@ -150,6 +240,7 @@ export const config = {
     "/login",
     "/register",
     "/no-access",
+    "/org/:path*",
 
     /*
      * Match all request paths except for the ones starting with:

@@ -41,6 +41,10 @@ import {
   message,
   modelPricing,
   type ModelPricing,
+  organisation,
+  type Organisation,
+  organisationMember,
+  type OrganisationMember,
   type Suggestion,
   stream,
   suggestion,
@@ -158,6 +162,7 @@ export async function getChatsByUserId({
       db
         .select({
           id: chat.id,
+          orgId: chat.orgId,
           createdAt: chat.createdAt,
           title: chat.title,
           userId: chat.userId,
@@ -624,6 +629,7 @@ export async function createProfile({
   invitedBy,
   ssoProvider,
   displayName,
+  isGlobalAdmin,
 }: {
   id: string;
   email: string;
@@ -631,6 +637,7 @@ export async function createProfile({
   invitedBy?: string | null;
   ssoProvider?: string | null;
   displayName?: string | null;
+  isGlobalAdmin?: boolean;
 }) {
   try {
     return await db.insert(user).values({
@@ -641,6 +648,7 @@ export async function createProfile({
       invitedAt: invitedBy ? new Date() : undefined,
       ssoProvider: ssoProvider ?? undefined,
       displayName: displayName ?? undefined,
+      isGlobalAdmin: isGlobalAdmin ?? false,
     });
   } catch (_error) {
     throw new ChatbotError(
@@ -2276,6 +2284,181 @@ export async function deleteUser(userId: string) {
     throw new ChatbotError(
       "bad_request:database",
       "Failed to delete user and related data",
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Organisation queries
+// ---------------------------------------------------------------------------
+
+/** Returns an organisation by its URL slug, or null if not found. */
+export async function getOrganizationBySlug(
+  slug: string,
+): Promise<Organisation | null> {
+  try {
+    const [row] = await db
+      .select()
+      .from(organisation)
+      .where(eq(organisation.slug, slug));
+
+    return row ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get organisation by slug",
+    );
+  }
+}
+
+/** Returns all organisations a user belongs to, with their membership role. */
+export async function getOrganizationsByUserId(userId: string) {
+  try {
+    return await db
+      .select({
+        id: organisation.id,
+        name: organisation.name,
+        slug: organisation.slug,
+        billingModel: organisation.billingModel,
+        role: organisationMember.role,
+        joinedAt: organisationMember.joinedAt,
+      })
+      .from(organisationMember)
+      .innerJoin(organisation, eq(organisationMember.orgId, organisation.id))
+      .where(eq(organisationMember.userId, userId))
+      .orderBy(asc(organisation.name));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get organisations by user id",
+    );
+  }
+}
+
+/** Returns a user's membership record for a given organisation, or null. */
+export async function getOrganizationMembership(
+  orgId: string,
+  userId: string,
+): Promise<OrganisationMember | null> {
+  try {
+    const [row] = await db
+      .select()
+      .from(organisationMember)
+      .where(
+        and(
+          eq(organisationMember.orgId, orgId),
+          eq(organisationMember.userId, userId),
+        ),
+      );
+
+    return row ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get organisation membership",
+    );
+  }
+}
+
+/** Creates a new organisation and returns it. */
+export async function createOrganization(values: {
+  name: string;
+  slug: string;
+  billingModel?: string;
+}): Promise<Organisation> {
+  try {
+    const now = new Date();
+    const [created] = await db
+      .insert(organisation)
+      .values({
+        name: values.name,
+        slug: values.slug,
+        billingModel: values.billingModel ?? "per_token",
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+
+    return created;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to create organisation",
+    );
+  }
+}
+
+/** Adds a user as a member of an organisation. */
+export async function addOrganizationMember(values: {
+  orgId: string;
+  userId: string;
+  role: "owner" | "admin" | "member";
+}): Promise<OrganisationMember> {
+  try {
+    const [created] = await db
+      .insert(organisationMember)
+      .values({
+        orgId: values.orgId,
+        userId: values.userId,
+        role: values.role,
+        joinedAt: new Date(),
+      })
+      .returning();
+
+    return created;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to add organisation member",
+    );
+  }
+}
+
+/** Removes a user from an organisation. */
+export async function removeOrganizationMember(
+  orgId: string,
+  userId: string,
+) {
+  try {
+    return await db
+      .delete(organisationMember)
+      .where(
+        and(
+          eq(organisationMember.orgId, orgId),
+          eq(organisationMember.userId, userId),
+        ),
+      );
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to remove organisation member",
+    );
+  }
+}
+
+/** Updates a member's role within an organisation. */
+export async function updateOrganizationMemberRole(
+  orgId: string,
+  userId: string,
+  role: "owner" | "admin" | "member",
+): Promise<OrganisationMember | null> {
+  try {
+    const [updated] = await db
+      .update(organisationMember)
+      .set({ role })
+      .where(
+        and(
+          eq(organisationMember.orgId, orgId),
+          eq(organisationMember.userId, userId),
+        ),
+      )
+      .returning();
+
+    return updated ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to update organisation member role",
     );
   }
 }
