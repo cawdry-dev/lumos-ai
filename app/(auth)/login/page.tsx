@@ -76,32 +76,35 @@ export default function Page() {
 
   return (
     <div className="relative flex min-h-dvh w-screen flex-col overflow-hidden bg-background lg:flex-row">
-      {/* Animated background orbs */}
+      {/* Animated background orbs — smooth, subtle movement */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
       >
         <div
-          className="animate-landing-orb absolute -left-32 -top-32 size-[500px] rounded-full opacity-30 blur-3xl"
+          className="animate-landing-orb absolute -left-32 -top-32 size-[500px] rounded-full opacity-20 blur-[80px]"
           style={{
             background:
-              "radial-gradient(circle, rgb(var(--org-primary-rgb) / 0.5), transparent 70%)",
+              "radial-gradient(circle, rgb(var(--org-primary-rgb) / 0.4), transparent 70%)",
+            animationDuration: "25s",
           }}
         />
         <div
-          className="animate-landing-orb absolute -bottom-40 -right-40 size-[600px] rounded-full opacity-20 blur-3xl"
+          className="animate-landing-orb absolute -bottom-40 -right-40 size-[600px] rounded-full opacity-15 blur-[100px]"
           style={{
             background:
-              "radial-gradient(circle, rgb(var(--org-secondary-rgb) / 0.5), transparent 70%)",
-            animationDelay: "4s",
+              "radial-gradient(circle, rgb(var(--org-secondary-rgb) / 0.35), transparent 70%)",
+            animationDelay: "5s",
+            animationDuration: "30s",
           }}
         />
         <div
-          className="animate-landing-orb absolute left-1/2 top-1/3 size-[350px] rounded-full opacity-15 blur-3xl"
+          className="animate-landing-orb absolute left-1/2 top-1/3 size-[350px] rounded-full opacity-10 blur-[90px]"
           style={{
             background:
-              "radial-gradient(circle, rgb(var(--org-primary-rgb) / 0.35), transparent 70%)",
-            animationDelay: "8s",
+              "radial-gradient(circle, rgb(var(--org-primary-rgb) / 0.3), transparent 70%)",
+            animationDelay: "10s",
+            animationDuration: "28s",
           }}
         />
       </div>
@@ -119,7 +122,7 @@ export default function Page() {
           <div className="mt-10 flex flex-col gap-6">
             {features.map((feature, i) => (
               <div
-                className="animate-landing-slide-up flex items-start gap-4"
+                className="glass-subtle animate-landing-slide-up relative flex items-start gap-4 rounded-xl p-4 transition-all duration-300 hover:shadow-md"
                 key={feature.title}
                 style={{ animationDelay: `${(i + 1) * 150}ms` }}
               >
@@ -151,7 +154,7 @@ export default function Page() {
       {/* ── Login form section (right on desktop, bottom on mobile) ── */}
       <div className="flex flex-1 items-center justify-center px-4 pb-12 lg:pb-0">
         <Card
-          className="glass-strong animate-landing-slide-up w-full max-w-md rounded-2xl border-0 shadow-xl"
+          className="glass-elevated animate-landing-slide-up w-full max-w-md rounded-2xl border-0 shadow-xl"
           style={{ animationDelay: "200ms" }}
         >
           <CardHeader className="items-center text-center">
@@ -172,11 +175,11 @@ export default function Page() {
             {/* SSO divider and buttons */}
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-4">
-                <div className="h-px flex-1 bg-border" />
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
                 <span className="text-xs text-muted-foreground">
                   or continue with
                 </span>
-                <div className="h-px flex-1 bg-border" />
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
               </div>
               <SsoButtons />
             </div>

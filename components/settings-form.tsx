@@ -253,7 +253,7 @@ export function SettingsForm({
   return (
     <div className="space-y-6">
       {/* Display Name */}
-      <Card>
+      <Card className="glass relative overflow-hidden">
         <CardHeader>
           <CardTitle className="text-xl">Display Name</CardTitle>
           <CardDescription>
@@ -281,7 +281,7 @@ export function SettingsForm({
       </Card>
 
       {/* Custom Instructions */}
-      <Card>
+      <Card className="glass relative overflow-hidden">
         <CardHeader>
           <CardTitle className="text-xl">Custom Instructions</CardTitle>
           <CardDescription>
@@ -314,7 +314,7 @@ export function SettingsForm({
 
 
       {/* Your Occupation */}
-      <Card>
+      <Card className="glass relative overflow-hidden">
         <CardHeader>
           <CardTitle className="text-xl">Your Occupation</CardTitle>
           <CardDescription>
@@ -342,7 +342,7 @@ export function SettingsForm({
       </Card>
 
       {/* More About You */}
-      <Card>
+      <Card className="glass relative overflow-hidden">
         <CardHeader>
           <CardTitle className="text-xl">More About You</CardTitle>
           <CardDescription>
@@ -369,7 +369,7 @@ export function SettingsForm({
       </Card>
 
       {/* Accent Colour */}
-      <Card>
+      <Card className="glass relative overflow-hidden">
         <CardHeader>
           <CardTitle className="text-xl">Accent Colour</CardTitle>
           <CardDescription>
@@ -389,7 +389,7 @@ export function SettingsForm({
 
       {/* Password */}
       {!ssoProvider && (
-        <Card>
+        <Card className="glass relative overflow-hidden">
           <CardHeader>
             <CardTitle className="text-xl">Change Password</CardTitle>
             <CardDescription>
@@ -430,7 +430,7 @@ export function SettingsForm({
       )}
 
       {/* Theme */}
-      <Card>
+      <Card className="glass relative overflow-hidden">
         <CardHeader>
           <CardTitle className="text-xl">Theme</CardTitle>
           <CardDescription>
@@ -454,7 +454,7 @@ export function SettingsForm({
       </Card>
 
       {/* Voice */}
-      <Card>
+      <Card className="glass relative overflow-hidden">
         <CardHeader>
           <CardTitle className="text-xl">Voice</CardTitle>
           <CardDescription>
@@ -479,7 +479,7 @@ export function SettingsForm({
       </Card>
 
       {/* Memory */}
-      <Card>
+      <Card className="glass relative overflow-hidden">
         <CardHeader>
           <CardTitle className="text-xl">Memory</CardTitle>
           <CardDescription>

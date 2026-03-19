@@ -30,7 +30,7 @@ export function SsoButtons() {
   };
 
   const btnClass =
-    "flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-background/60 px-4 py-2.5 text-sm font-medium text-foreground backdrop-blur-sm transition-all hover:bg-accent hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-50";
+    "glass-subtle flex w-full items-center justify-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
     <div className="flex flex-col gap-3">

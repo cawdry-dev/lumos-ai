@@ -97,7 +97,7 @@ function Loaded({ data, fromDate, toDate, setFromDate, setToDate }: { data: ApiR
         <h2 className="font-semibold text-xl">{u.displayName ?? u.email}</h2>
         <p className="text-sm text-muted-foreground">{u.email} · {u.role}</p>
       </div>
-      <Card>
+      <Card className="glass">
         <CardHeader className="pb-2"><CardTitle className="text-lg">Spending Limits</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <LimitBar label="Daily spend" usedCents={dailyCostCents} limitCents={dailyLimit} />
@@ -109,17 +109,17 @@ function Loaded({ data, fromDate, toDate, setFromDate, setToDate }: { data: ApiR
         <div><label className="mb-1 block text-xs text-muted-foreground">To</label><Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-40" /></div>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card><CardHeader className="pb-2"><CardDescription>Total cost</CardDescription><CardTitle className="text-2xl">{formatCost(totalCost)}</CardTitle></CardHeader></Card>
-        <Card><CardHeader className="pb-2"><CardDescription>Total tokens</CardDescription><CardTitle className="text-2xl">{formatNumber(totalTokens)}</CardTitle></CardHeader></Card>
-        <Card><CardHeader className="pb-2"><CardDescription>Aggregation rows</CardDescription><CardTitle className="text-2xl">{formatNumber(totalRows)}</CardTitle></CardHeader></Card>
+        <Card className="glass"><CardHeader className="pb-2"><CardDescription>Total cost</CardDescription><CardTitle className="text-2xl">{formatCost(totalCost)}</CardTitle></CardHeader></Card>
+        <Card className="glass"><CardHeader className="pb-2"><CardDescription>Total tokens</CardDescription><CardTitle className="text-2xl">{formatNumber(totalTokens)}</CardTitle></CardHeader></Card>
+        <Card className="glass"><CardHeader className="pb-2"><CardDescription>Aggregation rows</CardDescription><CardTitle className="text-2xl">{formatNumber(totalRows)}</CardTitle></CardHeader></Card>
       </div>
       {/* Model breakdown */}
-      <Card>
+      <Card className="glass">
         <CardHeader><CardTitle className="text-lg">Model Breakdown</CardTitle></CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-lg">
             <table className="w-full text-sm">
-              <thead><tr className="border-b text-left text-muted-foreground">
+              <thead><tr className="glass-table-header border-b text-left text-muted-foreground">
                 <th className="pb-2 pr-4 font-medium">Model</th>
                 <th className="pb-2 pr-4 font-medium text-right">Prompt tokens</th>
                 <th className="pb-2 pr-4 font-medium text-right">Completion tokens</th>
@@ -128,7 +128,7 @@ function Loaded({ data, fromDate, toDate, setFromDate, setToDate }: { data: ApiR
               </tr></thead>
               <tbody>
                 {byModel.map((m) => (
-                  <tr key={m.model} className="border-b last:border-0">
+                  <tr key={m.model} className="glass-table-row border-b last:border-0">
                     <td className="py-2 pr-4 font-mono text-xs">{m.model}</td>
                     <td className="py-2 pr-4 text-right tabular-nums">{formatNumber(m.prompt)}</td>
                     <td className="py-2 pr-4 text-right tabular-nums">{formatNumber(m.completion)}</td>
@@ -144,7 +144,7 @@ function Loaded({ data, fromDate, toDate, setFromDate, setToDate }: { data: ApiR
       </Card>
 
       {/* Daily cost chart */}
-      <Card>
+      <Card className="glass">
         <CardHeader><CardTitle className="text-lg">Daily Cost</CardTitle></CardHeader>
         <CardContent>
           {dailyCostChart.length > 0 ? (
@@ -162,19 +162,19 @@ function Loaded({ data, fromDate, toDate, setFromDate, setToDate }: { data: ApiR
       </Card>
 
       {/* Usage type breakdown */}
-      <Card>
+      <Card className="glass">
         <CardHeader><CardTitle className="text-lg">Usage Type Breakdown</CardTitle></CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-lg">
             <table className="w-full text-sm">
-              <thead><tr className="border-b text-left text-muted-foreground">
+              <thead><tr className="glass-table-header border-b text-left text-muted-foreground">
                 <th className="pb-2 pr-4 font-medium">Type</th>
                 <th className="pb-2 pr-4 font-medium text-right">Tokens</th>
                 <th className="pb-2 font-medium text-right">Cost</th>
               </tr></thead>
               <tbody>
                 {byType.map((t) => (
-                  <tr key={t.type} className="border-b last:border-0">
+                  <tr key={t.type} className="glass-table-row border-b last:border-0">
                     <td className="py-2 pr-4 capitalize">{t.type}</td>
                     <td className="py-2 pr-4 text-right tabular-nums">{formatNumber(t.tokens)}</td>
                     <td className="py-2 text-right tabular-nums">{formatCost(t.cost)}</td>
@@ -188,12 +188,12 @@ function Loaded({ data, fromDate, toDate, setFromDate, setToDate }: { data: ApiR
       </Card>
 
       {/* Recent usage log */}
-      <Card>
+      <Card className="glass">
         <CardHeader><CardTitle className="text-lg">Recent Usage Log</CardTitle></CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-lg">
             <table className="w-full text-sm">
-              <thead><tr className="border-b text-left text-muted-foreground">
+              <thead><tr className="glass-table-header border-b text-left text-muted-foreground">
                 <th className="pb-2 pr-4 font-medium">Date</th>
                 <th className="pb-2 pr-4 font-medium">Model</th>
                 <th className="pb-2 pr-4 font-medium">Type</th>
@@ -203,7 +203,7 @@ function Loaded({ data, fromDate, toDate, setFromDate, setToDate }: { data: ApiR
               </tr></thead>
               <tbody>
                 {log.map((entry) => (
-                  <tr key={entry.id} className="border-b last:border-0">
+                  <tr key={entry.id} className="glass-table-row border-b last:border-0">
                     <td className="py-2 pr-4 text-xs tabular-nums">{new Date(entry.createdAt).toLocaleString("en-GB")}</td>
                     <td className="py-2 pr-4 font-mono text-xs">{entry.modelId}</td>
                     <td className="py-2 pr-4 capitalize">{entry.usageType}</td>
