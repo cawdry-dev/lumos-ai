@@ -2,6 +2,8 @@ import { type NextRequest } from "next/server";
 import { auth } from "@/lib/supabase/auth";
 import { createServiceClient } from "@/lib/supabase/server";
 import {
+
+export const dynamic = "force-dynamic";
   getKnowledgeDocumentById,
   deleteKnowledgeDocument,
 } from "@/lib/db/queries";

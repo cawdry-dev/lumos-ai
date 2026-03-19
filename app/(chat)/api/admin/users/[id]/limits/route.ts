@@ -1,6 +1,8 @@
 import { auth } from "@/lib/supabase/auth";
 import { getUserCostLimits, setUserCostLimits } from "@/lib/db/queries";
 
+export const dynamic = "force-dynamic";
+
 type RouteContext = { params: Promise<{ id: string }> };
 
 /** GET /api/admin/users/[id]/limits — get a user's cost limits. */

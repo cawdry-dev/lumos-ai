@@ -1,5 +1,7 @@
 import { auth } from "@/lib/supabase/auth";
 import {
+
+export const dynamic = "force-dynamic";
   getProfileById,
   getMemoryCount,
   updateProfile,

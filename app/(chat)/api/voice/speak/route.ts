@@ -2,6 +2,8 @@ import { auth } from "@/lib/supabase/auth";
 import { generateSpeech } from "@/lib/ai/voice";
 import { getProfileById } from "@/lib/db/queries";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/voice/speak
  *

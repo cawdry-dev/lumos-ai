@@ -6,6 +6,8 @@ import {
 } from "@/lib/db/queries";
 import { sendInvitationEmail } from "@/lib/email/resend";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/admin/invitations
  *

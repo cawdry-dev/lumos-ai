@@ -1,6 +1,8 @@
 import { type NextRequest } from "next/server";
 import { auth } from "@/lib/supabase/auth";
 import {
+
+export const dynamic = "force-dynamic";
   getCopilotAccessUsers,
   grantCopilotAccess,
   revokeCopilotAccess,

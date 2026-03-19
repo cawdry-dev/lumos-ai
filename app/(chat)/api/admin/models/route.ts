@@ -8,6 +8,8 @@ import {
 } from "@/lib/db/queries";
 import { getGatewayModels } from "@/lib/ai/gateway";
 import {
+
+export const dynamic = "force-dynamic";
   DEFAULT_MODEL_PRICING,
   PROVIDER_WILDCARD_PRICING,
   getProviderFromModelId,

@@ -2,6 +2,8 @@ import { type NextRequest } from "next/server";
 import { auth } from "@/lib/supabase/auth";
 import { getMfaExemptStatus, setMfaExempt } from "@/lib/db/queries";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/admin/users/[id]/mfa
  *

@@ -1,6 +1,8 @@
 import { auth } from "@/lib/supabase/auth";
 import { updateUserRole } from "@/lib/db/queries";
 
+export const dynamic = "force-dynamic";
+
 /**
  * PATCH /api/admin/users
  *

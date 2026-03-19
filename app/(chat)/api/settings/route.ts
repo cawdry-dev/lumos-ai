@@ -1,6 +1,8 @@
 import { auth } from "@/lib/supabase/auth";
 import { getProfileById, updateProfile } from "@/lib/db/queries";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/settings
  *
