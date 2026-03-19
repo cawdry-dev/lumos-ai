@@ -204,29 +204,8 @@
   overscroll-behavior: contain;
 }
 
-@layer utilities {
-  :root {
-    --foreground-rgb: 0, 0, 0;
-    --background-start-rgb: 214, 219, 220;
-    --background-end-rgb: 255, 255, 255;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --foreground-rgb: 255, 255, 255;
-      --background-start-rgb: 0, 0, 0;
-      --background-end-rgb: 0, 0, 0;
-    }
-  }
-}
-
 @layer base {
-  * {
-    @apply border-border;
-  }
-
   body {
-    @apply bg-background text-foreground;
     overflow-x: hidden;
     position: relative;
   }
@@ -369,6 +348,17 @@
 
 
 /* ── Glassmorphism utility classes ── */
+.glass,
+.glass-strong,
+.glass-subtle,
+.glass-elevated,
+.chat-header-glass,
+.chat-input-glass,
+.chat-avatar-glass {
+  will-change: transform;
+  contain: paint;
+}
+
 .glass {
   background: var(--glass-bg-light);
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
