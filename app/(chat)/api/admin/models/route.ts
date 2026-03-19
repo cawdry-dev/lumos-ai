@@ -13,6 +13,8 @@ import {
   getProviderFromModelId,
 } from "@/lib/ai/pricing-defaults";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/admin/models
  *

@@ -1,6 +1,8 @@
 import { auth } from "@/lib/supabase/auth";
 import { testConnection, type DbType, type SshConfig } from "@/lib/rag/db-connector";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/copilots/test-connection
  *

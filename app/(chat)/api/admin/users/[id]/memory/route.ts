@@ -6,6 +6,8 @@ import {
   deleteAllMemoriesByUserId,
 } from "@/lib/db/queries";
 
+export const dynamic = "force-dynamic";
+
 type RouteContext = { params: Promise<{ id: string }> };
 
 /** GET /api/admin/users/[id]/memory — get a user's memory status and count. */

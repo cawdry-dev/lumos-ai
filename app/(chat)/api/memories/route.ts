@@ -6,6 +6,8 @@ import {
   searchMemories,
 } from "@/lib/db/queries";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/memories
  *

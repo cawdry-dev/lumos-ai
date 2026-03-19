@@ -6,6 +6,8 @@ import {
   deleteCopilot,
 } from "@/lib/db/queries";
 
+export const dynamic = "force-dynamic";
+
 /** Shared admin guard — returns a Response if the user is not an admin. */
 async function requireAdmin() {
   const session = await auth();

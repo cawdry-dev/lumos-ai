@@ -7,6 +7,8 @@ import {
   getUserCostLimits,
 } from "@/lib/db/queries";
 
+export const dynamic = "force-dynamic";
+
 type RouteContext = { params: Promise<{ userId: string }> };
 
 /**

@@ -1,6 +1,8 @@
 import { auth } from "@/lib/supabase/auth";
 import { transcribeAudio } from "@/lib/ai/voice";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/voice/transcribe
  *

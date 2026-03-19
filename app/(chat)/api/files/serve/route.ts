@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 /** Buckets that the serve endpoint is allowed to create signed URLs for. */
 const ALLOWED_BUCKETS = new Set(["attachments", "generated-images"]);
 

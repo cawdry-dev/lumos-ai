@@ -1,6 +1,8 @@
 import { auth } from "@/lib/supabase/auth";
 import { getCopilots, createCopilot } from "@/lib/db/queries";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/copilots
  *

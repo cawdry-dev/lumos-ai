@@ -5,6 +5,8 @@ import { auth } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 import { extractText, isSupportedMimeType } from "@/lib/rag/parse";
 
+export const dynamic = "force-dynamic";
+
 // Allow longer execution for large file uploads + text extraction.
 export const maxDuration = 60;
 

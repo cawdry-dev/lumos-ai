@@ -8,6 +8,8 @@ import {
 } from "@/lib/db/queries";
 import { ingestDocument } from "@/lib/rag/ingest";
 
+export const dynamic = "force-dynamic";
+
 const ALLOWED_TYPES = new Set([
   "text/plain",
   "text/markdown",

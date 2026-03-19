@@ -1,6 +1,8 @@
 import { auth } from "@/lib/supabase/auth";
 import { getUsageStats } from "@/lib/db/queries";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/admin/usage?from=...&to=...
  *

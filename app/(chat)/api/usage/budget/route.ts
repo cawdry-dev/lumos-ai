@@ -1,6 +1,8 @@
 import { auth } from "@/lib/supabase/auth";
 import { getUserCostForPeriod, getUserCostLimits } from "@/lib/db/queries";
 
+export const dynamic = "force-dynamic";
+
 /** Default cost limits by role (in cents). */
 const ROLE_DEFAULTS: Record<string, { daily: number; monthly: number }> = {
   editor: { daily: 500, monthly: 5000 },

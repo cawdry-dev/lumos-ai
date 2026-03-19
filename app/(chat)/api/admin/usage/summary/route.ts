@@ -9,6 +9,8 @@ import {
   getUsagePeriodTotals,
 } from "@/lib/db/queries";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/admin/usage/summary?from=...&to=...
  *

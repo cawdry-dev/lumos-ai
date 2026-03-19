@@ -6,6 +6,8 @@ import {
   updateModelPricing,
 } from "@/lib/db/queries";
 
+export const dynamic = "force-dynamic";
+
 /** Helper to validate admin access. */
 async function requireAdmin() {
   const session = await auth();

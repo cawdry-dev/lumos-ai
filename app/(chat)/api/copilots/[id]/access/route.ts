@@ -7,6 +7,8 @@ import {
   getCopilotById,
 } from "@/lib/db/queries";
 
+export const dynamic = "force-dynamic";
+
 /** Shared admin guard. */
 async function requireAdmin() {
   const session = await auth();

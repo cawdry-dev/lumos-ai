@@ -52,6 +52,8 @@ import { convertToUIMessages, generateUUID } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
+export const dynamic = "force-dynamic";
+
 export const maxDuration = 60;
 
 function getStreamContext() {

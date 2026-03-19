@@ -2,6 +2,8 @@ import { auth } from "@/lib/supabase/auth";
 import { getAvailableCopilots } from "@/lib/db/queries";
 import { ChatbotError } from "@/lib/errors";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/copilots/available
  *

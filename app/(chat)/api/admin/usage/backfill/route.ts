@@ -12,6 +12,8 @@ import {
 } from "@/lib/ai/pricing-defaults";
 import type { ModelPricing } from "@/lib/db/schema";
 
+export const dynamic = "force-dynamic";
+
 const BATCH_SIZE = 500;
 
 /**
