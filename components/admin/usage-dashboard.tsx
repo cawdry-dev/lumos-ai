@@ -398,7 +398,7 @@ export function UsageDashboard() {
             type="date"
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value)}
-            className="w-40"
+            className="glass-input w-40"
           />
         </div>
         <div>
@@ -407,7 +407,7 @@ export function UsageDashboard() {
             type="date"
             value={toDate}
             onChange={(e) => setToDate(e.target.value)}
-            className="w-40"
+            className="glass-input w-40"
           />
         </div>
         <div className="flex flex-wrap gap-1">
@@ -431,13 +431,13 @@ export function UsageDashboard() {
 
       {/* Summary cards — row 1 */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
+        <Card className="glass">
           <CardHeader className="pb-2">
             <CardDescription>Total cost (period)</CardDescription>
             <CardTitle className="text-2xl">{formatCost(totalCost)}</CardTitle>
           </CardHeader>
         </Card>
-        <Card>
+        <Card className="glass">
           <CardHeader className="pb-2">
             <CardDescription>Cost today</CardDescription>
             <CardTitle className="flex items-center gap-2 text-2xl">
@@ -458,7 +458,7 @@ export function UsageDashboard() {
             </CardTitle>
           </CardHeader>
         </Card>
-        <Card>
+        <Card className="glass">
           <CardHeader className="pb-2">
             <CardDescription>Avg cost per user per day</CardDescription>
             <CardTitle className="text-2xl">
@@ -470,7 +470,7 @@ export function UsageDashboard() {
 
       {/* Summary cards — row 2 */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
+        <Card className="glass">
           <CardHeader className="pb-2">
             <CardDescription>Total requests</CardDescription>
             <CardTitle className="text-2xl">
@@ -478,7 +478,7 @@ export function UsageDashboard() {
             </CardTitle>
           </CardHeader>
         </Card>
-        <Card>
+        <Card className="glass">
           <CardHeader className="pb-2">
             <CardDescription>Total tokens</CardDescription>
             <CardTitle className="text-2xl" title={`Prompt: ${formatNumber(totalPromptTokens)} / Completion: ${formatNumber(totalCompletionTokens)}`}>
@@ -490,7 +490,7 @@ export function UsageDashboard() {
             </p>
           </CardHeader>
         </Card>
-        <Card>
+        <Card className="glass">
           <CardHeader className="pb-2">
             <CardDescription>Active users</CardDescription>
             <CardTitle className="text-2xl">
@@ -501,22 +501,22 @@ export function UsageDashboard() {
       </div>
 
       {/* Usage by user table */}
-      <Card>
+      <Card className="glass">
         <CardHeader>
           <CardTitle className="text-lg">Usage by user</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-lg">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="pb-2 pr-4 font-medium">User</th>
-                  <th className="pb-2 pr-4 font-medium text-right">Requests</th>
-                  <th className="pb-2 pr-4 font-medium text-right">Prompt Tokens</th>
-                  <th className="pb-2 pr-4 font-medium text-right">Completion Tokens</th>
-                  <th className="pb-2 pr-4 font-medium text-right">Total Tokens</th>
-                  <th className="pb-2 pr-4 font-medium text-right">Cost</th>
-                  <th className="pb-2 font-medium text-right">% of Total</th>
+                <tr className="glass-table-header border-b text-left text-muted-foreground">
+                  <th className="px-3 py-2.5 font-medium">User</th>
+                  <th className="px-3 py-2.5 font-medium text-right">Requests</th>
+                  <th className="px-3 py-2.5 font-medium text-right">Prompt Tokens</th>
+                  <th className="px-3 py-2.5 font-medium text-right">Completion Tokens</th>
+                  <th className="px-3 py-2.5 font-medium text-right">Total Tokens</th>
+                  <th className="px-3 py-2.5 font-medium text-right">Cost</th>
+                  <th className="px-3 py-2.5 font-medium text-right">% of Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -529,7 +529,7 @@ export function UsageDashboard() {
                         ? (u.totalCostCents / totalCost) * 100
                         : 0;
                     return (
-                      <tr key={u.userId} className="border-b last:border-0 hover:bg-muted/50">
+                      <tr key={u.userId} className="glass-table-row border-b last:border-0">
                         <td className="py-2 pr-4">
                           <Link
                             href={`/admin/usage/${u.userId}`}
@@ -583,22 +583,22 @@ export function UsageDashboard() {
       </Card>
 
       {/* Usage by model table */}
-      <Card>
+      <Card className="glass">
         <CardHeader>
           <CardTitle className="text-lg">Usage by model</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-lg">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="pb-2 pr-4 font-medium">Model</th>
-                  <th className="pb-2 pr-4 font-medium text-right">Requests</th>
-                  <th className="pb-2 pr-4 font-medium text-right">Prompt Tokens</th>
-                  <th className="pb-2 pr-4 font-medium text-right">Completion Tokens</th>
-                  <th className="pb-2 pr-4 font-medium text-right">Total Tokens</th>
-                  <th className="pb-2 pr-4 font-medium text-right">Cost</th>
-                  <th className="pb-2 font-medium text-right">Pricing</th>
+                <tr className="glass-table-header border-b text-left text-muted-foreground">
+                  <th className="px-3 py-2.5 font-medium">Model</th>
+                  <th className="px-3 py-2.5 font-medium text-right">Requests</th>
+                  <th className="px-3 py-2.5 font-medium text-right">Prompt Tokens</th>
+                  <th className="px-3 py-2.5 font-medium text-right">Completion Tokens</th>
+                  <th className="px-3 py-2.5 font-medium text-right">Total Tokens</th>
+                  <th className="px-3 py-2.5 font-medium text-right">Cost</th>
+                  <th className="px-3 py-2.5 font-medium text-right">Pricing</th>
                 </tr>
               </thead>
               <tbody>
@@ -608,7 +608,7 @@ export function UsageDashboard() {
                   .map((m) => {
                     const pricing = findPricing(m.modelId);
                     return (
-                      <tr key={m.modelId} className="border-b last:border-0">
+                      <tr key={m.modelId} className="glass-table-row border-b last:border-0">
                         <td className="py-2 pr-4 font-mono text-xs">
                           {m.modelId}
                         </td>
@@ -653,19 +653,19 @@ export function UsageDashboard() {
       </Card>
 
       {/* Usage by co-pilot table */}
-      <Card>
+      <Card className="glass">
         <CardHeader>
           <CardTitle className="text-lg">Usage by co-pilot</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-lg">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="pb-2 pr-4 font-medium">Co-pilot</th>
-                  <th className="pb-2 pr-4 font-medium text-right">Tokens</th>
-                  <th className="pb-2 pr-4 font-medium text-right">Cost</th>
-                  <th className="pb-2 font-medium text-right">% of Total</th>
+                <tr className="glass-table-header border-b text-left text-muted-foreground">
+                  <th className="px-3 py-2.5 font-medium">Co-pilot</th>
+                  <th className="px-3 py-2.5 font-medium text-right">Tokens</th>
+                  <th className="px-3 py-2.5 font-medium text-right">Cost</th>
+                  <th className="px-3 py-2.5 font-medium text-right">% of Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -680,7 +680,7 @@ export function UsageDashboard() {
                     return (
                       <tr
                         key={c.copilotId ?? "general"}
-                        className="border-b last:border-0"
+                        className="glass-table-row border-b last:border-0"
                       >
                         <td className="py-2 pr-4">
                           {c.copilotName ?? "General"}
@@ -711,7 +711,7 @@ export function UsageDashboard() {
       </Card>
 
       {/* Usage by type */}
-      <Card>
+      <Card className="glass">
         <CardHeader>
           <CardTitle className="text-lg">Usage by type</CardTitle>
         </CardHeader>
@@ -758,7 +758,7 @@ export function UsageDashboard() {
       {/* Charts grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Daily cost trend (area) */}
-        <Card>
+        <Card className="glass">
           <CardHeader>
             <CardTitle className="text-lg">Daily cost trend</CardTitle>
           </CardHeader>
@@ -791,7 +791,7 @@ export function UsageDashboard() {
         </Card>
 
         {/* Cost by model (horizontal bar) */}
-        <Card>
+        <Card className="glass">
           <CardHeader>
             <CardTitle className="text-lg">Cost by model</CardTitle>
           </CardHeader>
@@ -826,7 +826,7 @@ export function UsageDashboard() {
         </Card>
 
         {/* Cost by user (pie chart) */}
-        <Card>
+        <Card className="glass">
           <CardHeader>
             <CardTitle className="text-lg">Cost by user (top 10)</CardTitle>
           </CardHeader>
@@ -869,7 +869,7 @@ export function UsageDashboard() {
         </Card>
 
         {/* Token usage over time (stacked area) */}
-        <Card>
+        <Card className="glass">
           <CardHeader>
             <CardTitle className="text-lg">Token usage over time</CardTitle>
           </CardHeader>
@@ -917,7 +917,7 @@ export function UsageDashboard() {
 
       {/* Active pricing rules (collapsible) */}
       <Collapsible open={pricingOpen} onOpenChange={setPricingOpen}>
-        <Card>
+        <Card className="glass">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CollapsibleTrigger className="flex items-center gap-2 hover:opacity-80">
@@ -941,8 +941,8 @@ export function UsageDashboard() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b text-left text-muted-foreground">
-                      <th className="pb-2 pr-4 font-medium">Model pattern</th>
+                    <tr className="glass-table-header border-b text-left text-muted-foreground">
+                      <th className="px-3 py-2.5 font-medium">Model pattern</th>
                       <th className="pb-2 pr-4 font-medium text-right">
                         Prompt (¢/1K)
                       </th>
@@ -958,7 +958,7 @@ export function UsageDashboard() {
                     {(data?.activePricingRules ?? []).map((rule) => (
                       <tr
                         key={rule.id}
-                        className="border-b last:border-0"
+                        className="glass-table-row border-b last:border-0"
                       >
                         <td className="py-2 pr-4 font-mono text-xs">
                           {rule.modelPattern}

@@ -80,17 +80,17 @@ export function UserLimits({ users: initialUsers }: { users: UserWithLimits[] })
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b text-left text-muted-foreground">
-              <th className="pb-2 pr-4 font-medium">User</th>
-              <th className="pb-2 pr-4 font-medium">Role</th>
-              <th className="pb-2 pr-4 font-medium text-right">Daily limit</th>
-              <th className="pb-2 pr-4 font-medium text-right">Monthly limit</th>
-              <th className="pb-2 font-medium text-right">Actions</th>
+            <tr className="glass-table-header border-b text-left text-muted-foreground">
+              <th className="px-3 py-2.5 font-medium">User</th>
+              <th className="px-3 py-2.5 font-medium">Role</th>
+              <th className="px-3 py-2.5 font-medium text-right">Daily limit</th>
+              <th className="px-3 py-2.5 font-medium text-right">Monthly limit</th>
+              <th className="px-3 py-2.5 font-medium text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {users.map((u) => (
-              <tr key={u.id} className="border-b last:border-0">
+              <tr key={u.id} className="glass-table-row border-b last:border-0">
                 <td className="py-2 pr-4">{u.displayName ?? u.email}</td>
                 <td className="py-2 pr-4 capitalize text-muted-foreground">{u.role}</td>
                 <td className="py-2 pr-4 text-right tabular-nums">{formatLimit(u.dailyCostLimitCents)}</td>
@@ -134,6 +134,7 @@ export function UserLimits({ users: initialUsers }: { users: UserWithLimits[] })
                 placeholder="e.g. 5.00 (leave blank for role default)"
                 value={dailyLimit}
                 onChange={(e) => setDailyLimit(e.target.value)}
+                className="glass-input"
               />
             </div>
             <div className="grid gap-2">
@@ -146,6 +147,7 @@ export function UserLimits({ users: initialUsers }: { users: UserWithLimits[] })
                 placeholder="e.g. 50.00 (leave blank for role default)"
                 value={monthlyLimit}
                 onChange={(e) => setMonthlyLimit(e.target.value)}
+                className="glass-input"
               />
             </div>
           </div>

@@ -210,27 +210,27 @@ export function UserList({
   };
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto rounded-lg">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b text-left text-muted-foreground">
-            <th className="pb-2 pr-4 font-medium">Email</th>
-            <th className="pb-2 pr-4 font-medium">Display Name</th>
-            <th className="pb-2 pr-4 font-medium">Role</th>
-            <th className="pb-2 pr-4 font-medium">Cost Limit</th>
-            <th className="pb-2 pr-4 font-medium">MFA Exempt</th>
-            <th className="pb-2 pr-4 font-medium">Memory</th>
-            <th className="pb-2 font-medium">Actions</th>
+          <tr className="glass-table-header border-b text-left text-muted-foreground">
+            <th className="px-3 py-2.5 font-medium">Email</th>
+            <th className="px-3 py-2.5 font-medium">Display Name</th>
+            <th className="px-3 py-2.5 font-medium">Role</th>
+            <th className="px-3 py-2.5 font-medium">Cost Limit</th>
+            <th className="px-3 py-2.5 font-medium">MFA Exempt</th>
+            <th className="px-3 py-2.5 font-medium">Memory</th>
+            <th className="px-3 py-2.5 font-medium">Actions</th>
           </tr>
         </thead>
         <tbody>
           {userList.map((u) => (
-            <tr key={u.id} className="border-b last:border-0">
-              <td className="py-3 pr-4">{u.email}</td>
-              <td className="py-3 pr-4 text-muted-foreground">
+            <tr key={u.id} className="glass-table-row border-b last:border-0">
+              <td className="px-3 py-3">{u.email}</td>
+              <td className="px-3 py-3 text-muted-foreground">
                 {u.displayName ?? "—"}
               </td>
-              <td className="py-3 pr-4">
+              <td className="px-3 py-3">
                 {u.id === currentUserId ? (
                   <span className="text-muted-foreground capitalize">
                     {u.role}
@@ -250,12 +250,12 @@ export function UserList({
                   </Select>
                 )}
               </td>
-              <td className="py-3 pr-4 text-xs text-muted-foreground tabular-nums">
+              <td className="px-3 py-3 text-xs text-muted-foreground tabular-nums">
                 {u.dailyCostLimitCents != null || u.monthlyCostLimitCents != null
                   ? `${formatLimit(u.dailyCostLimitCents)}/day · ${formatLimit(u.monthlyCostLimitCents)}/mo`
                   : "Role default"}
               </td>
-              <td className="py-3 pr-4">
+              <td className="px-3 py-3">
                 {u.id === currentUserId ? (
                   <span className="text-muted-foreground text-xs">—</span>
                 ) : (
@@ -277,7 +277,7 @@ export function UserList({
                   </button>
                 )}
               </td>
-              <td className="py-3 pr-4">
+              <td className="px-3 py-3">
                 <button
                   type="button"
                   onClick={() => openMemoryDialog(u.id)}
@@ -286,7 +286,7 @@ export function UserList({
                   Manage
                 </button>
               </td>
-              <td className="py-3">
+              <td className="px-3 py-3">
                 {u.id !== currentUserId && (
                   <Button
                     variant="ghost"

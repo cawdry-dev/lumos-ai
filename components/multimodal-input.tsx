@@ -378,7 +378,7 @@ function PureMultimodalInput({
   }, [handlePaste]);
 
   return (
-    <div className={cn("relative flex w-full flex-col gap-4", className)}>
+    <div className={cn("relative flex w-full flex-col gap-4 px-2 md:px-4", className)}>
       <BudgetIndicator />
 
       <input
@@ -392,7 +392,7 @@ function PureMultimodalInput({
       />
 
       <PromptInput
-        className="rounded-xl border border-border bg-background p-3 shadow-xs transition-all duration-200 focus-within:border-border hover:border-muted-foreground/50"
+        className="chat-input-glass rounded-2xl border-0 p-3 transition-all duration-200"
         onSubmit={(event) => {
           event.preventDefault();
           if (!input.trim() && attachments.length === 0) {
@@ -468,7 +468,7 @@ function PureMultimodalInput({
             />
             <Button
               className={cn(
-                "aspect-square h-8 rounded-lg p-1 transition-colors hover:bg-accent",
+                "chat-ghost-btn aspect-square h-8 rounded-lg p-1",
                 enableWebSearch
                   ? "text-foreground"
                   : "text-muted-foreground/50"
@@ -485,7 +485,7 @@ function PureMultimodalInput({
             {supportsImageGen && (
               <Button
                 className={cn(
-                  "aspect-square h-8 rounded-lg p-1 transition-colors hover:bg-accent",
+                  "chat-ghost-btn aspect-square h-8 rounded-lg p-1",
                   enableImageGen
                     ? "text-foreground"
                     : "text-muted-foreground/50"
@@ -512,7 +512,11 @@ function PureMultimodalInput({
             <StopButton setMessages={setMessages} stop={stop} />
           ) : (
             <PromptInputSubmit
-              className="size-8 rounded-full bg-primary text-primary-foreground transition-colors duration-200 hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
+              className={cn(
+                "size-8 rounded-full text-white transition-all duration-200",
+                "chat-send-btn",
+                input.trim() && uploadQueue.length === 0 && "chat-send-ready"
+              )}
               data-testid="send-button"
               disabled={!input.trim() || uploadQueue.length > 0}
               status={status}
@@ -572,7 +576,7 @@ function PureAttachmentsButton({
 
   return (
     <Button
-      className="aspect-square h-8 rounded-lg p-1 transition-colors hover:bg-accent"
+      className="chat-ghost-btn aspect-square h-8 rounded-lg p-1"
       data-testid="attachments-button"
       disabled={status !== "ready" || isReasoningModel}
       onClick={(event) => {

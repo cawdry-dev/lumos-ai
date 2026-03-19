@@ -72,6 +72,7 @@ export function InvitationForm() {
           placeholder="Jane Smith"
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
+          className="glass-input"
         />
       </div>
 
@@ -84,6 +85,7 @@ export function InvitationForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          className="glass-input"
         />
       </div>
 

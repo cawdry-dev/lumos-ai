@@ -49,19 +49,19 @@ export function CopilotList({ copilots }: { copilots: CopilotRow[] }) {
   };
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto rounded-lg">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b text-left text-muted-foreground">
-            <th className="pb-2 pr-4 font-medium">Name</th>
-            <th className="pb-2 pr-4 font-medium">Type</th>
-            <th className="pb-2 pr-4 font-medium">Status</th>
-            <th className="pb-2 font-medium text-right">Actions</th>
+          <tr className="glass-table-header border-b text-left text-muted-foreground">
+            <th className="px-3 py-2.5 font-medium">Name</th>
+            <th className="px-3 py-2.5 font-medium">Type</th>
+            <th className="px-3 py-2.5 font-medium">Status</th>
+            <th className="px-3 py-2.5 font-medium text-right">Actions</th>
           </tr>
         </thead>
         <tbody>
           {list.map((c) => (
-            <tr key={c.id} className="border-b last:border-0">
+            <tr key={c.id} className="glass-table-row border-b last:border-0">
               <td className="py-3 pr-4">
                 <span className="mr-2">{c.emoji ?? "🤖"}</span>
                 {c.name}

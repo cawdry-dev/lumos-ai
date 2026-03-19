@@ -35,7 +35,7 @@ export function SidebarUserNav({ user }: { user: UserNav }) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
-              className="h-10 bg-background data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="sidebar-glass-ghost h-10 rounded-lg data-[state=open]:text-sidebar-accent-foreground"
               data-testid="user-nav-button"
             >
               <Image
@@ -52,7 +52,7 @@ export function SidebarUserNav({ user }: { user: UserNav }) {
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-(--radix-popper-anchor-width)"
+            className="sidebar-glass-elevated w-(--radix-popper-anchor-width)"
             data-testid="user-nav-menu"
             side="top"
           >

@@ -55,12 +55,12 @@ export function CopilotSelector({
           initial={{ opacity: 0, y: 10 }}
           transition={{ delay: 0.05 * index }}
           onClick={() => onSelect(option.id)}
+          data-selected={selectedCopilotId === option.id}
           className={cn(
-            "flex items-start gap-3 rounded-xl border p-3 text-left transition-colors",
-            "hover:bg-muted/50",
+            "relative flex items-start gap-3 rounded-xl p-3 text-left chat-glass-card",
             selectedCopilotId === option.id
-              ? "border-primary bg-primary/5"
-              : "border-border",
+              ? "border-primary/30"
+              : "",
           )}
         >
           <span className="mt-0.5 text-xl" role="img" aria-label={option.name}>

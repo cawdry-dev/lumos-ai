@@ -173,7 +173,7 @@ export function ModelManagement({ models }: { models: ChatModel[] }) {
                   return (
                     <div
                       key={model.id}
-                      className="flex items-center justify-between rounded-md border px-3 py-2"
+                      className="glass-table-row flex items-center justify-between rounded-md border px-3 py-2"
                     >
                       <div>
                         <p className="font-medium text-sm">{model.name}</p>

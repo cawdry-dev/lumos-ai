@@ -27,7 +27,7 @@ export function AuthForm({
         <Input
           autoComplete="email"
           autoFocus
-          className="bg-muted text-md md:text-sm"
+          className="glass-input text-md md:text-sm"
           defaultValue={defaultEmail}
           id="email"
           name="email"
@@ -46,7 +46,7 @@ export function AuthForm({
         </Label>
 
         <Input
-          className="bg-muted text-md md:text-sm"
+          className="glass-input text-md md:text-sm"
           id="password"
           name="password"
           required

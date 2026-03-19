@@ -211,6 +211,7 @@ export function CopilotForm({
           onChange={(e) => update("name", e.target.value)}
           placeholder="e.g. HR Assistant"
           required
+          className="glass-input"
         />
       </div>
 
@@ -222,6 +223,7 @@ export function CopilotForm({
           value={data.description}
           onChange={(e) => update("description", e.target.value)}
           placeholder="A brief description of what this co-pilot does"
+          className="glass-input"
         />
       </div>
 
@@ -358,6 +360,7 @@ export function CopilotForm({
                   ? "postgresql://user:pass@host:5432/dbname"
                   : "mysql://user:pass@host:3306/dbname"
               }
+              className="glass-input"
             />
             <p className="text-xs text-muted-foreground">
               Connection string for the external database. Stored securely.
@@ -376,6 +379,7 @@ export function CopilotForm({
                   value={data.sshHost}
                   onChange={(e) => update("sshHost", e.target.value)}
                   placeholder="bastion.example.com"
+                  className="glass-input"
                 />
               </div>
               <div className="space-y-2">
@@ -386,6 +390,7 @@ export function CopilotForm({
                   value={data.sshPort}
                   onChange={(e) => update("sshPort", Number(e.target.value) || 22)}
                   placeholder="22"
+                  className="glass-input"
                 />
               </div>
             </div>
@@ -397,6 +402,7 @@ export function CopilotForm({
                 value={data.sshUsername}
                 onChange={(e) => update("sshUsername", e.target.value)}
                 placeholder="ec2-user"
+                className="glass-input"
               />
             </div>
 

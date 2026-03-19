@@ -24,7 +24,7 @@ function PureChatHeader({
   const { width: windowWidth } = useWindowSize();
 
   return (
-    <header className="sticky top-0 flex items-center gap-2 glass-subtle border-b border-border/20 px-2 py-1.5 md:px-2">
+    <header className="sticky top-0 z-10 flex items-center gap-2 chat-header-glass px-2 py-1 md:px-2">
       <SidebarToggle />
 
       {(!open || windowWidth < 768) && (

@@ -114,7 +114,7 @@ export function SsoSettings({
               placeholder="yourcompany.com"
               value={newDomain}
               onChange={(e) => setNewDomain(e.target.value)}
-              className="w-56"
+              className="glass-input w-56"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -123,7 +123,7 @@ export function SsoSettings({
               id="sso-role"
               value={newRole}
               onChange={(e) => setNewRole(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              className="glass-input h-9 rounded-md px-3 text-sm"
             >
               <option value="editor">Editor</option>
               <option value="admin">Admin</option>
@@ -135,7 +135,7 @@ export function SsoSettings({
               id="sso-provider"
               value={newProvider}
               onChange={(e) => setNewProvider(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              className="glass-input h-9 rounded-md px-3 text-sm"
             >
               <option value="any">Any</option>
               <option value="azure">Azure AD only</option>
@@ -160,19 +160,19 @@ export function SsoSettings({
             invitation to access the application.
           </p>
         ) : (
-          <div className="rounded-md border">
+          <div className="overflow-hidden rounded-lg">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="px-4 py-2 text-left font-medium">Domain</th>
-                  <th className="px-4 py-2 text-left font-medium">Default Role</th>
-                  <th className="px-4 py-2 text-left font-medium">Provider</th>
-                  <th className="px-4 py-2 text-right font-medium">Actions</th>
+                <tr className="glass-table-header border-b text-left text-muted-foreground">
+                  <th className="px-4 py-2.5 font-medium">Domain</th>
+                  <th className="px-4 py-2.5 font-medium">Default Role</th>
+                  <th className="px-4 py-2.5 font-medium">Provider</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {domains.map((d) => (
-                  <tr key={d.id} className="border-b last:border-0">
+                  <tr key={d.id} className="glass-table-row border-b last:border-0">
                     <td className="px-4 py-2 font-mono text-xs">{d.domain}</td>
                     <td className="px-4 py-2 capitalize">{d.defaultRole}</td>
                     <td className="px-4 py-2 capitalize">
