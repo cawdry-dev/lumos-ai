@@ -2177,3 +2177,105 @@ export async function batchUpdateUsageCosts(
     );
   }
 }
+
+
+// ---------------------------------------------------------------------------
+// Delete user and all related data
+// ---------------------------------------------------------------------------
+
+/**
+ * Deletes a user and all their owned data in the correct foreign-key order.
+ * The entire operation is wrapped in a transaction so it either fully
+ * succeeds or fully rolls back.
+ */
+export async function deleteUser(userId: string) {
+  try {
+    await db.transaction(async (tx) => {
+      // 1. Get all chat IDs owned by this user
+      const userChats = await tx
+        .select({ id: chat.id })
+        .from(chat)
+        .where(eq(chat.userId, userId));
+
+      const chatIds = userChats.map((c) => c.id);
+
+      if (chatIds.length > 0) {
+        // 2. Delete Vote_v2 rows for user's chats
+        await tx.delete(vote).where(inArray(vote.chatId, chatIds));
+
+        // 3. Delete Stream rows for user's chats
+        await tx.delete(stream).where(inArray(stream.chatId, chatIds));
+
+        // 4. Delete Message_v2 rows for user's chats
+        await tx.delete(message).where(inArray(message.chatId, chatIds));
+      }
+
+      // 5. Get all document IDs owned by this user, then delete suggestions
+      const userDocuments = await tx
+        .select({ id: document.id, createdAt: document.createdAt })
+        .from(document)
+        .where(eq(document.userId, userId));
+
+      if (userDocuments.length > 0) {
+        const docIds = userDocuments.map((d) => d.id);
+        await tx.delete(suggestion).where(inArray(suggestion.documentId, docIds));
+      }
+
+      // 6. Delete Document rows
+      await tx.delete(document).where(eq(document.userId, userId));
+
+      // 7. Delete Chat rows
+      if (chatIds.length > 0) {
+        await tx.delete(chat).where(eq(chat.userId, userId));
+      }
+
+      // 8. Delete Memory rows
+      await tx.delete(memory).where(eq(memory.userId, userId));
+
+      // 9. Delete TokenUsage rows
+      await tx.delete(tokenUsage).where(eq(tokenUsage.userId, userId));
+
+      // 10. Delete CopilotAccess rows
+      await tx.delete(copilotAccess).where(eq(copilotAccess.userId, userId));
+
+      // 11. Nullify Invitation.invitedBy where it matches userId
+      await tx.execute(
+        sql`UPDATE "Invitation" SET "invitedBy" = NULL WHERE "invitedBy" = ${userId}::uuid`,
+      );
+
+      // 12. Nullify EnabledModel.enabledBy where it matches userId
+      await tx.execute(
+        sql`UPDATE "EnabledModel" SET "enabledBy" = NULL WHERE "enabledBy" = ${userId}::uuid`,
+      );
+
+      // 13. Nullify AllowedDomain.createdBy where it matches userId
+      await tx.execute(
+        sql`UPDATE "AllowedDomain" SET "createdBy" = NULL WHERE "createdBy" = ${userId}::uuid`,
+      );
+
+      // 14. Nullify KnowledgeDocument.uploadedBy where it matches userId
+      await tx.execute(
+        sql`UPDATE "KnowledgeDocument" SET "uploadedBy" = NULL WHERE "uploadedBy" = ${userId}::uuid`,
+      );
+
+      // 15. Nullify Copilot.createdBy where it matches userId
+      await tx.execute(
+        sql`UPDATE "Copilot" SET "createdBy" = NULL WHERE "createdBy" = ${userId}::uuid`,
+      );
+
+      // 16. Nullify User.invitedBy on other users that reference this user
+      await tx
+        .update(user)
+        .set({ invitedBy: null })
+        .where(eq(user.invitedBy, userId));
+
+      // 17. Delete the User row
+      await tx.delete(user).where(eq(user.id, userId));
+    });
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to delete user and related data",
+    );
+  }
+}
