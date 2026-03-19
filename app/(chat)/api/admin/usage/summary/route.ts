@@ -1,7 +1,5 @@
 import { auth } from "@/lib/supabase/auth";
 import {
-
-export const dynamic = "force-dynamic";
   getActiveModelPricing,
   getUsageByCopilot,
   getUsageByModel,
@@ -10,6 +8,8 @@ export const dynamic = "force-dynamic";
   getUsageDailySeries,
   getUsagePeriodTotals,
 } from "@/lib/db/queries";
+
+export const dynamic = "force-dynamic";
 
 /**
  * GET /api/admin/usage/summary?from=...&to=...

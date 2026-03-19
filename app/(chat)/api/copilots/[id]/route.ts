@@ -1,12 +1,12 @@
 import { type NextRequest } from "next/server";
 import { auth } from "@/lib/supabase/auth";
 import {
-
-export const dynamic = "force-dynamic";
   getCopilotById,
   updateCopilot,
   deleteCopilot,
 } from "@/lib/db/queries";
+
+export const dynamic = "force-dynamic";
 
 /** Shared admin guard — returns a Response if the user is not an admin. */
 async function requireAdmin() {

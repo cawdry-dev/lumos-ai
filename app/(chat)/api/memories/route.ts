@@ -1,12 +1,12 @@
 import { auth } from "@/lib/supabase/auth";
 import {
-
-export const dynamic = "force-dynamic";
   createMemory,
   deleteMemory,
   getMemoriesByUserId,
   searchMemories,
 } from "@/lib/db/queries";
+
+export const dynamic = "force-dynamic";
 
 /**
  * GET /api/memories

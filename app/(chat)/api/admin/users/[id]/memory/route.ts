@@ -1,12 +1,12 @@
 import { auth } from "@/lib/supabase/auth";
 import {
-
-export const dynamic = "force-dynamic";
   getProfileById,
   getMemoryCount,
   updateProfile,
   deleteAllMemoriesByUserId,
 } from "@/lib/db/queries";
+
+export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ id: string }> };
 

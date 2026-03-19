@@ -1,12 +1,12 @@
 import { auth } from "@/lib/supabase/auth";
 import {
-
-export const dynamic = "force-dynamic";
   createModelPricing,
   deleteModelPricing,
   getAllModelPricing,
   updateModelPricing,
 } from "@/lib/db/queries";
+
+export const dynamic = "force-dynamic";
 
 /** Helper to validate admin access. */
 async function requireAdmin() {

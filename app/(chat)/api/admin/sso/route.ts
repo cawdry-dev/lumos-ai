@@ -1,11 +1,11 @@
 import { auth } from "@/lib/supabase/auth";
 import {
-
-export const dynamic = "force-dynamic";
   createAllowedDomain,
   deleteAllowedDomain,
   getAllowedDomains,
 } from "@/lib/db/queries";
+
+export const dynamic = "force-dynamic";
 
 /**
  * GET /api/admin/sso
