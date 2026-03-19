@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { Trash2 } from "lucide-react";
 import { toast } from "@/components/toast";
 import {
   Select,
@@ -19,6 +20,8 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type UserRow = {
   id: string;
@@ -147,6 +150,37 @@ export function UserList({
     }
   };
 
+  const [deleteDialogUser, setDeleteDialogUser] = useState<UserRow | null>(null);
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const handleDeleteUser = async () => {
+    if (!deleteDialogUser) return;
+    setDeleteLoading(true);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: deleteDialogUser.id }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        toast({ type: "error", description: data.error ?? "Failed to delete user." });
+        return;
+      }
+
+      setUserList((prev) => prev.filter((u) => u.id !== deleteDialogUser.id));
+      setDeleteDialogUser(null);
+      setDeleteConfirmEmail("");
+      toast({ type: "success", description: "User deleted successfully." });
+    } catch {
+      toast({ type: "error", description: "Failed to delete user." });
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const handleMfaExemptToggle = async (userId: string, exempt: boolean) => {
     try {
       const res = await fetch(`/api/admin/users/${userId}/mfa`, {
@@ -185,7 +219,8 @@ export function UserList({
             <th className="pb-2 pr-4 font-medium">Role</th>
             <th className="pb-2 pr-4 font-medium">Cost Limit</th>
             <th className="pb-2 pr-4 font-medium">MFA Exempt</th>
-            <th className="pb-2 font-medium">Memory</th>
+            <th className="pb-2 pr-4 font-medium">Memory</th>
+            <th className="pb-2 font-medium">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -242,7 +277,7 @@ export function UserList({
                   </button>
                 )}
               </td>
-              <td className="py-3">
+              <td className="py-3 pr-4">
                 <button
                   type="button"
                   onClick={() => openMemoryDialog(u.id)}
@@ -250,6 +285,22 @@ export function UserList({
                 >
                   Manage
                 </button>
+              </td>
+              <td className="py-3">
+                {u.id !== currentUserId && (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => {
+                      setDeleteDialogUser(u);
+                      setDeleteConfirmEmail("");
+                    }}
+                    aria-label={`Delete user ${u.email}`}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </td>
             </tr>
           ))}
@@ -358,6 +409,62 @@ export function UserList({
             <DialogClose asChild>
               <Button variant="outline">Close</Button>
             </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete user confirmation dialog */}
+      <Dialog
+        open={deleteDialogUser !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteDialogUser(null);
+            setDeleteConfirmEmail("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete user</DialogTitle>
+            <DialogDescription>
+              This will permanently delete the user and all their data. This
+              cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="delete-confirm-email">
+                Type{" "}
+                <span className="font-semibold">
+                  {deleteDialogUser?.email}
+                </span>{" "}
+                to confirm
+              </Label>
+              <Input
+                id="delete-confirm-email"
+                value={deleteConfirmEmail}
+                onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+                placeholder={deleteDialogUser?.email ?? ""}
+                autoComplete="off"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button
+              variant="destructive"
+              disabled={
+                deleteLoading ||
+                deleteConfirmEmail !== deleteDialogUser?.email
+              }
+              onClick={handleDeleteUser}
+            >
+              {deleteLoading ? "Deleting…" : "Delete user"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
