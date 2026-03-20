@@ -2,6 +2,15 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/supabase/auth";
 import { getOrganizationsByUserId } from "@/lib/db/queries";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { CreateOrgForm } from "@/components/create-org-form";
 
 /**
  * Organisation picker page.
@@ -28,25 +37,31 @@ export default async function OrgSelectPage() {
 
         {orgs.length === 0 ? (
           <p className="text-center text-sm text-muted-foreground">
-            You don&apos;t belong to any organisations yet.
+            You don&apos;t belong to any organisations yet. Create one below.
           </p>
         ) : (
-          <ul className="space-y-2">
+          <div className="space-y-2">
             {orgs.map((org) => (
-              <li key={org.id}>
-                <Link
-                  href={`/org/${org.slug}`}
-                  className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted"
-                >
-                  <span className="font-medium">{org.name}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    {org.slug}
-                  </span>
-                </Link>
-              </li>
+              <Link key={org.id} href={`/org/${org.slug}`}>
+                <Card className="cursor-pointer transition-colors hover:bg-muted/50">
+                  <CardContent className="flex items-center gap-3 p-4">
+                    <div className="flex-1">
+                      <p className="font-medium">{org.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {org.slug}
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="capitalize">
+                      {org.role}
+                    </Badge>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
-          </ul>
+          </div>
         )}
+
+        <CreateOrgForm />
       </div>
     </div>
   );
