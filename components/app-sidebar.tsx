@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
-import { Settings } from "lucide-react";
-import { useOrgPath } from "@/lib/org-url";
-import { useState } from "react";
+import { Building2, ChevronDown, Settings, Shield, Users } from "lucide-react";
+import { useOrgPath, useOrgSlug } from "@/lib/org-url";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
@@ -34,20 +34,51 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "./ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+
+export type OrgInfo = {
+  name: string;
+  slug: string;
+  role: string;
+};
 
 export function AppSidebar({
   user,
   userRole,
+  isGlobalAdmin,
+  orgInfo,
 }: {
   user: User | undefined;
   userRole?: string;
+  isGlobalAdmin?: boolean;
+  orgInfo?: OrgInfo;
 }) {
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
   const { mutate } = useSWRConfig();
   const buildPath = useOrgPath();
+  const orgSlug = useOrgSlug();
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
+  const [otherOrgs, setOtherOrgs] = useState<OrgInfo[]>([]);
+
+  const isOrgAdmin = orgInfo?.role === "admin" || orgInfo?.role === "owner";
+
+  // Fetch other orgs for the switcher
+  useEffect(() => {
+    fetch("/api/org")
+      .then((res) => res.json())
+      .then((orgs: OrgInfo[]) => {
+        setOtherOrgs(orgs.filter((o) => o.slug !== orgSlug));
+      })
+      .catch(() => {});
+  }, [orgSlug]);
 
   const handleDeleteAll = () => {
     const deletePromise = fetch(buildPath("/api/history"), {
@@ -124,19 +155,83 @@ export function AppSidebar({
               </div>
             </div>
           </SidebarMenu>
+          {/* Organisation switcher */}
+          {orgInfo && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="sidebar-glass-hover flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <Building2 className="h-4 w-4 shrink-0" />
+                  <span className="truncate font-medium">{orgInfo.name}</span>
+                  <ChevronDown className="ml-auto h-3 w-3 shrink-0 opacity-50" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                {otherOrgs.map((org) => (
+                  <DropdownMenuItem
+                    key={org.slug}
+                    className="cursor-pointer"
+                    onSelect={() => router.push(`/org/${org.slug}`)}
+                  >
+                    <Building2 className="mr-2 h-4 w-4" />
+                    {org.name}
+                  </DropdownMenuItem>
+                ))}
+                {otherOrgs.length > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onSelect={() => router.push("/org/select")}
+                >
+                  <PlusIcon />
+                  <span className="ml-2">Create new organisation</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </SidebarHeader>
         <SidebarContent>
           <SidebarHistory user={user} />
         </SidebarContent>
-        {userRole === "admin" && (
+        {(isOrgAdmin || userRole === "admin" || isGlobalAdmin) && (
           <div className="border-t border-border/10 px-2 py-2">
-            <Link
-              href={buildPath("/admin")}
-              className="sidebar-glass-hover flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-muted-foreground hover:text-foreground"
-            >
-              <Settings className="h-4 w-4" />
-              Admin
-            </Link>
+            {isOrgAdmin && (
+              <>
+                <Link
+                  href={buildPath("/admin/members")}
+                  className="sidebar-glass-hover flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-muted-foreground hover:text-foreground"
+                >
+                  <Users className="h-4 w-4" />
+                  Members
+                </Link>
+                <Link
+                  href={buildPath("/settings/organisation")}
+                  className="sidebar-glass-hover flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-muted-foreground hover:text-foreground"
+                >
+                  <Building2 className="h-4 w-4" />
+                  Organisation Settings
+                </Link>
+              </>
+            )}
+            {userRole === "admin" && (
+              <Link
+                href={buildPath("/admin")}
+                className="sidebar-glass-hover flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-muted-foreground hover:text-foreground"
+              >
+                <Settings className="h-4 w-4" />
+                Admin
+              </Link>
+            )}
+            {isGlobalAdmin && (
+              <Link
+                href="/admin"
+                className="sidebar-glass-hover flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-muted-foreground hover:text-foreground"
+              >
+                <Shield className="h-4 w-4" />
+                Global Admin
+              </Link>
+            )}
           </div>
         )}
         <SidebarFooter>{user && <SidebarUserNav user={user} />}</SidebarFooter>

@@ -5,7 +5,7 @@ import { updateSession } from "./lib/supabase/middleware";
  * Paths that never require organisation context.
  * Auth-related flows, the org picker, and health checks bypass org checks.
  */
-const ORG_BYPASS_PREFIXES = ["/login", "/register", "/auth", "/mfa", "/no-access", "/org/select", "/ping"];
+const ORG_BYPASS_PREFIXES = ["/login", "/register", "/auth", "/mfa", "/no-access", "/org/select", "/ping", "/admin"];
 
 /** Returns true if the pathname should skip org-context validation. */
 function isOrgBypassPath(pathname: string): boolean {
@@ -145,6 +145,27 @@ export async function proxy(request: NextRequest) {
     }
 
     // -----------------------------------------------------------------------
+    // Global admin route protection
+    // -----------------------------------------------------------------------
+    if (pathname.startsWith("/admin")) {
+      const { data: adminProfile } = await supabase
+        .from("User")
+        .select("isGlobalAdmin")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!adminProfile?.isGlobalAdmin) {
+        if (pathname.startsWith("/admin/api/")) {
+          return NextResponse.json(
+            { error: "Global admin access required." },
+            { status: 403 }
+          );
+        }
+        return NextResponse.redirect(new URL("/org/select", request.url));
+      }
+    }
+
+    // -----------------------------------------------------------------------
     // Organisation context — extract slug from URL and validate membership
     // -----------------------------------------------------------------------
     if (!isOrgBypassPath(pathname)) {
@@ -241,6 +262,7 @@ export const config = {
     "/register",
     "/no-access",
     "/org/:path*",
+    "/admin/:path*",
 
     /*
      * Match all request paths except for the ones starting with:
