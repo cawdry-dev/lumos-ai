@@ -28,6 +28,7 @@ import {
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
 import { type ChatModel, DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
+import { useOrgPath } from "@/lib/org-url";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -45,6 +46,7 @@ import { VoiceRecorder } from "./voice-recorder";
 
 /** Small budget indicator that fetches the user's remaining daily/monthly budget. */
 function BudgetIndicator() {
+  const buildPath = useOrgPath();
   const [budget, setBudget] = useState<{
     dailyUsedCents: number;
     dailyLimitCents: number | null;
@@ -58,7 +60,7 @@ function BudgetIndicator() {
     let cancelled = false;
     async function fetchBudget() {
       try {
-        const res = await fetch("/api/usage/budget");
+        const res = await fetch(buildPath("/api/usage/budget"));
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled) setBudget(data);
@@ -158,6 +160,7 @@ function PureMultimodalInput({
   supportsImageGen: boolean;
   modelLocked?: boolean;
 }) {
+  const buildPath = useOrgPath();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
 
@@ -269,7 +272,7 @@ function PureMultimodalInput({
     formData.append("file", file);
 
     try {
-      const response = await fetch("/api/files/upload", {
+      const response = await fetch(buildPath("/api/files/upload"), {
         method: "POST",
         body: formData,
       });

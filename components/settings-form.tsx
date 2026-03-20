@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import { useOrgPath } from "@/lib/org-url";
 import { toast } from "sonner";
 import { AccentColourPicker } from "@/components/accent-colour-picker";
 import { useAccentColour } from "@/components/accent-colour-provider";
@@ -54,6 +55,7 @@ export function SettingsForm({
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { accentColour, setAccentColour } = useAccentColour();
+  const buildPath = useOrgPath();
 
   // Display name state
   const [displayName, setDisplayName] = useState(initialDisplayName);
@@ -87,7 +89,7 @@ export function SettingsForm({
   const handleSaveDisplayName = async () => {
     setSavingName(true);
     try {
-      const res = await fetch("/api/settings", {
+      const res = await fetch(buildPath("/api/settings"), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ displayName }),
@@ -107,7 +109,7 @@ export function SettingsForm({
 
   const handleSaveAccentColour = async () => {
     try {
-      const res = await fetch("/api/settings", {
+      const res = await fetch(buildPath("/api/settings"), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ accentColour }),
@@ -125,7 +127,7 @@ export function SettingsForm({
   const handleSaveVoice = async (voice: string) => {
     setSelectedVoice(voice);
     try {
-      const res = await fetch("/api/settings", {
+      const res = await fetch(buildPath("/api/settings"), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ttsVoice: voice }),
@@ -143,7 +145,7 @@ export function SettingsForm({
   const handleSaveCustomInstructions = async () => {
     setSavingCustomInstructions(true);
     try {
-      const res = await fetch("/api/settings", {
+      const res = await fetch(buildPath("/api/settings"), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ customInstructions: customInstructions || null }),
@@ -164,7 +166,7 @@ export function SettingsForm({
   const handleSaveOccupation = async () => {
     setSavingOccupation(true);
     try {
-      const res = await fetch("/api/settings", {
+      const res = await fetch(buildPath("/api/settings"), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ occupation: occupation || null }),
@@ -185,7 +187,7 @@ export function SettingsForm({
   const handleSaveAboutYou = async () => {
     setSavingAboutYou(true);
     try {
-      const res = await fetch("/api/settings", {
+      const res = await fetch(buildPath("/api/settings"), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ aboutYou: aboutYou || null }),
@@ -206,7 +208,7 @@ export function SettingsForm({
   const handleToggleMemory = async (enabled: boolean) => {
     setMemoryEnabled(enabled);
     try {
-      const res = await fetch("/api/settings", {
+      const res = await fetch(buildPath("/api/settings"), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ memoryEnabled: enabled }),
@@ -489,7 +491,7 @@ export function SettingsForm({
         <CardContent>
           <div className="space-y-4">
             <Link
-              href="/settings/memories"
+              href={buildPath("/settings/memories")}
               className="text-sm font-medium text-primary hover:underline"
             >
               Manage memories →

@@ -5,6 +5,7 @@ import { AccentColourPicker } from "@/components/accent-colour-picker";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import { useOrgPath } from "@/lib/org-url";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +29,7 @@ type UserNav = {
 export function SidebarUserNav({ user }: { user: UserNav }) {
   const router = useRouter();
   const { setTheme, resolvedTheme } = useTheme();
+  const buildPath = useOrgPath();
 
   return (
     <SidebarMenu>
@@ -77,7 +79,7 @@ export function SidebarUserNav({ user }: { user: UserNav }) {
             <DropdownMenuItem
               className="cursor-pointer"
               data-testid="user-nav-item-settings"
-              onSelect={() => router.push("/settings")}
+              onSelect={() => router.push(buildPath("/settings"))}
             >
               <Settings className="mr-2 h-4 w-4" />
               Settings
@@ -89,7 +91,7 @@ export function SidebarUserNav({ user }: { user: UserNav }) {
                 onClick={async () => {
                   const supabase = createClient();
                   await supabase.auth.signOut();
-                  router.push("/");
+                  router.push("/login");
                   router.refresh();
                 }}
                 type="button"

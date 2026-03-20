@@ -4,6 +4,8 @@ import type { UserType } from "@/lib/supabase/auth";
 import { entitlementsByUserType } from "./entitlements";
 import {
   getActiveModelPricing,
+  getOrgCostForPeriod,
+  getOrgCostLimits,
   getUserCostForPeriod,
   getUserCostLimits,
   insertTokenUsage,
@@ -79,9 +81,10 @@ export async function recordUsage(params: {
   promptTokens: number;
   completionTokens: number;
   usageType: "chat" | "embedding" | "artifact" | "title" | "suggestion" | "whisper" | "tts";
+  orgId: string;
 }): Promise<void> {
   try {
-    const pricingRules = await getActiveModelPricing();
+    const pricingRules = await getActiveModelPricing(params.orgId);
     let pricing: ModelPricing | null = findPricingForModel(params.modelId, pricingRules);
 
     // Fallback to hardcoded defaults when no DB pricing rule matches
@@ -132,6 +135,7 @@ export async function recordUsage(params: {
       totalTokens,
       estimatedCostCents,
       usageType: params.usageType,
+      orgId: params.orgId,
     });
   } catch (error) {
     console.error("[usage] Failed to record token usage:", error);
@@ -161,8 +165,30 @@ function startOfMonth(): Date {
 export async function checkCostLimits(
   userId: string,
   userRole: UserType,
+  orgId: string,
 ): Promise<string | null> {
-  const userLimits = await getUserCostLimits(userId);
+  // Check org-level limits first
+  const orgLimits = await getOrgCostLimits(orgId);
+  const now = new Date();
+
+  if (orgLimits) {
+    if (orgLimits.dailyCostLimitCents !== null) {
+      const orgDayCost = await getOrgCostForPeriod({ orgId, from: startOfDay(), to: now });
+      if (orgDayCost.totalCostCents >= orgLimits.dailyCostLimitCents) {
+        return "org_daily";
+      }
+    }
+
+    if (orgLimits.monthlyCostLimitCents !== null) {
+      const orgMonthCost = await getOrgCostForPeriod({ orgId, from: startOfMonth(), to: now });
+      if (orgMonthCost.totalCostCents >= orgLimits.monthlyCostLimitCents) {
+        return "org_monthly";
+      }
+    }
+  }
+
+  // Then check per-user limits
+  const userLimits = await getUserCostLimits(userId, orgId);
   const roleDefaults = entitlementsByUserType[userRole];
 
   const dailyLimit = userLimits?.dailyCostLimitCents ?? roleDefaults.dailyCostLimitCents;
@@ -171,17 +197,15 @@ export async function checkCostLimits(
   // Unlimited — no check needed
   if (dailyLimit === null && monthlyLimit === null) return null;
 
-  const now = new Date();
-
   if (dailyLimit !== null) {
-    const dayCost = await getUserCostForPeriod({ userId, from: startOfDay(), to: now });
+    const dayCost = await getUserCostForPeriod({ userId, from: startOfDay(), to: now, orgId });
     if (dayCost.totalCostCents >= dailyLimit) {
       return "daily";
     }
   }
 
   if (monthlyLimit !== null) {
-    const monthCost = await getUserCostForPeriod({ userId, from: startOfMonth(), to: now });
+    const monthCost = await getUserCostForPeriod({ userId, from: startOfMonth(), to: now, orgId });
     if (monthCost.totalCostCents >= monthlyLimit) {
       return "monthly";
     }

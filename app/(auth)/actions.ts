@@ -3,8 +3,11 @@
 import { z } from "zod";
 
 import {
+  addOrganizationMember,
+  createOrganization,
   createProfile,
   getInvitationByToken,
+  getOrganizationBySlug,
   getUserCount,
   markInvitationAccepted,
 } from "@/lib/db/queries";
@@ -106,7 +109,8 @@ export const register = async (
       return { status: "failed" };
     }
 
-    // First user becomes admin automatically; subsequent users require a valid invitation
+    // First user becomes admin + global admin automatically and gets a default org.
+    // Subsequent users require a valid invitation and join the inviting org.
     const existingUserCount = await getUserCount();
 
     if (existingUserCount === 0) {
@@ -115,6 +119,19 @@ export const register = async (
         email: validatedData.email,
         role: "admin",
         displayName: formDisplayName,
+        isGlobalAdmin: true,
+      });
+
+      // Create the default organisation and make the first user its owner
+      const defaultOrg = await createOrganization({
+        name: "Default",
+        slug: "default",
+      });
+
+      await addOrganizationMember({
+        orgId: defaultOrg.id,
+        userId,
+        role: "owner",
       });
     } else {
       if (!token) {
@@ -138,6 +155,15 @@ export const register = async (
       });
 
       await markInvitationAccepted(token);
+
+      // Add the new user to the inviting organisation (if one was set on the invitation)
+      if (inv.orgId) {
+        await addOrganizationMember({
+          orgId: inv.orgId,
+          userId,
+          role: "member",
+        });
+      }
     }
 
     return { status: "success" };

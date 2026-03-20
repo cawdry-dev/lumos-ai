@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useOrgPath } from "@/lib/org-url";
 import {
   Area,
   AreaChart,
@@ -16,6 +17,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { OrgBillingSummary } from "@/components/admin/org-billing-summary";
 import { toast } from "@/components/toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -98,6 +100,12 @@ type UsageSummary = {
     isActive: boolean;
     updatedAt: string;
   }>;
+  billingModel?: string;
+  memberCount?: number;
+  orgLimits?: {
+    dailyCostLimitCents: number | null;
+    monthlyCostLimitCents: number | null;
+  } | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -169,6 +177,7 @@ function computeRange(
 // ---------------------------------------------------------------------------
 
 export function UsageDashboard() {
+  const buildPath = useOrgPath();
   const [data, setData] = useState<UsageSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [pricingOpen, setPricingOpen] = useState(false);
@@ -188,7 +197,7 @@ export function UsageDashboard() {
       const to = new Date(toDate);
       to.setDate(to.getDate() + 1); // Include the end date
       const res = await fetch(
-        `/api/admin/usage/summary?from=${from.toISOString()}&to=${to.toISOString()}`,
+        buildPath(`/api/admin/usage/summary?from=${from.toISOString()}&to=${to.toISOString()}`),
       );
       if (!res.ok) {
         toast({ type: "error", description: "Failed to load usage data." });
@@ -429,6 +438,20 @@ export function UsageDashboard() {
         </Button>
       </div>
 
+      {/* Organisation billing summary */}
+      {data?.billingModel && (
+        <OrgBillingSummary
+          billingModel={data.billingModel}
+          memberCount={data.memberCount ?? 0}
+          periodTotals={{
+            totalTokens: totalTokens,
+            totalCostCents: totalCost,
+          }}
+          orgLimits={data.orgLimits ?? null}
+          dailySeries={data.dailySeries ?? []}
+        />
+      )}
+
       {/* Summary cards — row 1 */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card className="glass">
@@ -532,7 +555,7 @@ export function UsageDashboard() {
                       <tr key={u.userId} className="glass-table-row border-b last:border-0">
                         <td className="py-2 pr-4">
                           <Link
-                            href={`/admin/usage/${u.userId}`}
+                            href={buildPath(`/admin/usage/${u.userId}`)}
                             className="text-primary hover:underline"
                           >
                             {u.displayName ?? u.email}
@@ -929,7 +952,7 @@ export function UsageDashboard() {
                 <CardTitle className="text-lg">Active pricing rules</CardTitle>
               </CollapsibleTrigger>
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/admin/pricing">
+                <Link href={buildPath("/admin/pricing")}>
                   <ExternalLink className="mr-1 size-3" />
                   Manage pricing
                 </Link>

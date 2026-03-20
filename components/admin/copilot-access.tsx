@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useOrgPath } from "@/lib/org-url";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,10 +29,12 @@ type AvailableUser = {
 export function CopilotAccess({
   copilotId,
   allUsers,
+
 }: {
   copilotId: string;
   allUsers: AvailableUser[];
 }) {
+  const buildPath = useOrgPath();
   const [accessUsers, setAccessUsers] = useState<AccessUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
@@ -40,7 +43,7 @@ export function CopilotAccess({
 
   const fetchAccess = useCallback(async () => {
     try {
-      const res = await fetch(`/api/copilots/${copilotId}/access`);
+      const res = await fetch(buildPath(`/api/copilots/${copilotId}/access`));
       if (!res.ok) {
         toast({ type: "error", description: "Failed to load access list." });
         return;
@@ -62,7 +65,7 @@ export function CopilotAccess({
     if (!selectedUserId) return;
     setGranting(true);
     try {
-      const res = await fetch(`/api/copilots/${copilotId}/access`, {
+      const res = await fetch(buildPath(`/api/copilots/${copilotId}/access`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: selectedUserId }),
@@ -85,7 +88,7 @@ export function CopilotAccess({
   const handleRevoke = async (userId: string) => {
     setRevokingId(userId);
     try {
-      const res = await fetch(`/api/copilots/${copilotId}/access`, {
+      const res = await fetch(buildPath(`/api/copilots/${copilotId}/access`), {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId }),

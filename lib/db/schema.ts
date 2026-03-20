@@ -12,6 +12,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -32,6 +33,35 @@ const vector = customType<{ data: number[]; driverData: string }>({
     return `[${value.join(",")}]`;
   },
 });
+
+// ---------------------------------------------------------------------------
+// Organisation tables
+// ---------------------------------------------------------------------------
+
+/** An organisation that groups users, co-pilots, and resources. */
+export const organisation = pgTable(
+  "Organisation",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    /** Display name of the organisation. */
+    name: varchar("name", { length: 100 }).notNull(),
+    /** URL-friendly unique slug for the organisation. */
+    slug: varchar("slug", { length: 50 }).notNull(),
+    /** Billing model — 'per_token' or 'per_seat'. */
+    billingModel: varchar("billingModel", { length: 20 }).notNull().default("per_token"),
+    /** Per-org daily cost limit in cents (pence). Null means unlimited. */
+    dailyCostLimitCents: integer("dailyCostLimitCents"),
+    /** Per-org monthly cost limit in cents (pence). Null means unlimited. */
+    monthlyCostLimitCents: integer("monthlyCostLimitCents"),
+    createdAt: timestamp("createdAt").notNull(),
+    updatedAt: timestamp("updatedAt").notNull(),
+  },
+  (table) => ({
+    slugIdx: uniqueIndex("organisation_slug_idx").on(table.slug),
+  })
+);
+
+export type Organisation = InferSelectModel<typeof organisation>;
 
 export const user = pgTable("User", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
@@ -66,6 +96,8 @@ export const user = pgTable("User", {
   aboutYou: text("aboutYou"),
   /** Whether the AI should save and reference memories. */
   memoryEnabled: boolean("memoryEnabled").notNull().default(true),
+  /** Whether this user is a global admin with cross-organisation privileges. */
+  isGlobalAdmin: boolean("isGlobalAdmin").notNull().default(false),
 }, (table) => ({
   invitedByRef: foreignKey({
     columns: [table.invitedBy],
@@ -74,6 +106,28 @@ export const user = pgTable("User", {
 }));
 
 export type User = InferSelectModel<typeof user>;
+
+/** Maps users to organisations with a role (owner, admin, or member). */
+export const organisationMember = pgTable(
+  "OrganisationMember",
+  {
+    orgId: uuid("orgId")
+      .notNull()
+      .references(() => organisation.id),
+    userId: uuid("userId")
+      .notNull()
+      .references(() => user.id),
+    /** Role within the organisation — 'owner', 'admin', or 'member'. */
+    role: varchar("role", { length: 20 }).notNull().default("member"),
+    joinedAt: timestamp("joinedAt").notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.orgId, table.userId] }),
+    userIdx: index("organisationMember_userId_idx").on(table.userId),
+  })
+);
+
+export type OrganisationMember = InferSelectModel<typeof organisationMember>;
 
 // ---------------------------------------------------------------------------
 // Co-pilot & Knowledge tables
@@ -130,13 +184,19 @@ export const copilot = pgTable("Copilot", {
   enabledTools: json("enabledTools").$type<string[] | null>(),
   /** Whether this co-pilot is available to users. */
   isActive: boolean("isActive").notNull().default(true),
+  /** Whether this co-pilot is globally available across all organisations. */
+  isGlobal: boolean("isGlobal").notNull().default(false),
+  /** Organisation that owns this co-pilot. */
+  orgId: uuid("orgId").references(() => organisation.id),
   /** The user who created this co-pilot. */
   createdBy: uuid("createdBy")
     .notNull()
     .references(() => user.id),
   createdAt: timestamp("createdAt").notNull(),
   updatedAt: timestamp("updatedAt").notNull(),
-});
+}, (table) => ({
+  orgIdx: index("copilot_orgId_idx").on(table.orgId),
+}));
 
 export type Copilot = InferSelectModel<typeof copilot>;
 
@@ -151,6 +211,8 @@ export const chat = pgTable(
       .references(() => user.id),
     /** Optional co-pilot that owns this chat session. */
     copilotId: uuid("copilotId"),
+    /** Organisation this chat belongs to. */
+    orgId: uuid("orgId").references(() => organisation.id),
     visibility: varchar("visibility", { enum: ["public", "private"] })
       .notNull()
       .default("private"),
@@ -160,6 +222,7 @@ export const chat = pgTable(
       columns: [table.copilotId],
       foreignColumns: [copilot.id],
     }),
+    orgIdx: index("chat_orgId_idx").on(table.orgId),
   })
 );
 
@@ -211,10 +274,13 @@ export const document = pgTable(
     userId: uuid("userId")
       .notNull()
       .references(() => user.id),
+    /** Organisation this document belongs to. */
+    orgId: uuid("orgId").references(() => organisation.id),
   },
   (table) => {
     return {
       pk: primaryKey({ columns: [table.id, table.createdAt] }),
+      orgIdx: index("document_orgId_idx").on(table.orgId),
     };
   }
 );
@@ -266,38 +332,54 @@ export const stream = pgTable(
 export type Stream = InferSelectModel<typeof stream>;
 
 /** Pending invitations sent to prospective users. */
-export const invitation = pgTable("Invitation", {
-  id: uuid("id").primaryKey().notNull().defaultRandom(),
-  email: varchar("email", { length: 255 }).notNull(),
-  /** Role the invitee will receive upon acceptance. */
-  role: varchar("role", { length: 20 }).notNull().default("editor"),
-  /** Optional display name pre-filled by the admin. */
-  displayName: text("displayName"),
-  /** Unique token used to accept the invitation. */
-  token: varchar("token", { length: 64 }).notNull().unique(),
-  /** The admin who created this invitation. */
-  invitedBy: uuid("invitedBy")
-    .notNull()
-    .references(() => user.id),
-  createdAt: timestamp("createdAt").notNull(),
-  /** Timestamp when the invitation was accepted; null if still pending. */
-  acceptedAt: timestamp("acceptedAt"),
-  /** Expiry timestamp after which the invitation is no longer valid. */
-  expiresAt: timestamp("expiresAt").notNull(),
-});
+export const invitation = pgTable(
+  "Invitation",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    email: varchar("email", { length: 255 }).notNull(),
+    /** Role the invitee will receive upon acceptance. */
+    role: varchar("role", { length: 20 }).notNull().default("editor"),
+    /** Optional display name pre-filled by the admin. */
+    displayName: text("displayName"),
+    /** Unique token used to accept the invitation. */
+    token: varchar("token", { length: 64 }).notNull().unique(),
+    /** The admin who created this invitation. */
+    invitedBy: uuid("invitedBy")
+      .notNull()
+      .references(() => user.id),
+    /** Organisation this invitation belongs to. */
+    orgId: uuid("orgId").references(() => organisation.id),
+    createdAt: timestamp("createdAt").notNull(),
+    /** Timestamp when the invitation was accepted; null if still pending. */
+    acceptedAt: timestamp("acceptedAt"),
+    /** Expiry timestamp after which the invitation is no longer valid. */
+    expiresAt: timestamp("expiresAt").notNull(),
+  },
+  (table) => ({
+    orgIdx: index("invitation_orgId_idx").on(table.orgId),
+  })
+);
 
 export type Invitation = InferSelectModel<typeof invitation>;
 
 /** AI models that have been enabled for use in the application. */
-export const enabledModel = pgTable("EnabledModel", {
-  /** The model identifier string, e.g. "openai/gpt-4.1-mini". */
-  id: varchar("id", { length: 255 }).primaryKey().notNull(),
-  enabledAt: timestamp("enabledAt").notNull(),
-  /** The admin who enabled this model. */
-  enabledBy: uuid("enabledBy")
-    .notNull()
-    .references(() => user.id),
-});
+export const enabledModel = pgTable(
+  "EnabledModel",
+  {
+    /** The model identifier string, e.g. "openai/gpt-4.1-mini". */
+    id: varchar("id", { length: 255 }).primaryKey().notNull(),
+    enabledAt: timestamp("enabledAt").notNull(),
+    /** The admin who enabled this model. */
+    enabledBy: uuid("enabledBy")
+      .notNull()
+      .references(() => user.id),
+    /** Organisation this enabled model belongs to. */
+    orgId: uuid("orgId").references(() => organisation.id),
+  },
+  (table) => ({
+    orgIdx: index("enabledModel_orgId_idx").on(table.orgId),
+  })
+);
 
 export type EnabledModel = InferSelectModel<typeof enabledModel>;
 
@@ -316,9 +398,12 @@ export const copilotAccess = pgTable(
       .notNull()
       .references(() => user.id),
     grantedAt: timestamp("grantedAt").notNull(),
+    /** Organisation this access record belongs to. */
+    orgId: uuid("orgId").references(() => organisation.id),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.copilotId, table.userId] }),
+    orgIdx: index("copilotAccess_orgId_idx").on(table.orgId),
   })
 );
 
@@ -348,9 +433,13 @@ export const knowledgeDocument = pgTable("KnowledgeDocument", {
   uploadedBy: uuid("uploadedBy")
     .notNull()
     .references(() => user.id),
+  /** Organisation this knowledge document belongs to. */
+  orgId: uuid("orgId").references(() => organisation.id),
   createdAt: timestamp("createdAt").notNull(),
   updatedAt: timestamp("updatedAt").notNull(),
-});
+}, (table) => ({
+  orgIdx: index("knowledgeDocument_orgId_idx").on(table.orgId),
+}));
 
 export type KnowledgeDocument = InferSelectModel<typeof knowledgeDocument>;
 
@@ -369,6 +458,8 @@ export const knowledgeChunk = pgTable(
     metadata: json("metadata"),
     tokenCount: integer("tokenCount").notNull(),
     chunkIndex: integer("chunkIndex").notNull(),
+    /** Organisation this chunk belongs to. */
+    orgId: uuid("orgId").references(() => organisation.id),
     createdAt: timestamp("createdAt").notNull(),
   },
   (table) => ({
@@ -377,6 +468,7 @@ export const knowledgeChunk = pgTable(
       "hnsw",
       sql`${table.embedding} vector_cosine_ops`,
     ),
+    orgIdx: index("knowledgeChunk_orgId_idx").on(table.orgId),
   })
 );
 
@@ -410,6 +502,8 @@ export const tokenUsage = pgTable(
       length: 20,
       enum: ["chat", "embedding", "artifact", "title", "suggestion", "whisper", "tts"],
     }).notNull(),
+    /** Organisation this usage record belongs to. */
+    orgId: uuid("orgId").references(() => organisation.id),
     createdAt: timestamp("createdAt").notNull(),
   },
   (table) => ({
@@ -423,23 +517,32 @@ export const tokenUsage = pgTable(
       columns: [table.copilotId],
       foreignColumns: [copilot.id],
     }),
+    orgIdx: index("tokenUsage_orgId_idx").on(table.orgId),
   })
 );
 
 export type TokenUsage = InferSelectModel<typeof tokenUsage>;
 
 /** Admin-editable pricing table for AI models. */
-export const modelPricing = pgTable("ModelPricing", {
-  id: uuid("id").primaryKey().notNull().defaultRandom(),
-  /** Glob or exact match pattern, e.g. "openai/gpt-4.1-*". */
-  modelPattern: varchar("modelPattern", { length: 200 }).notNull(),
-  /** Price in cents per 1K prompt tokens. */
-  promptPricePer1kTokens: numeric("promptPricePer1kTokens").notNull(),
-  /** Price in cents per 1K completion tokens. */
-  completionPricePer1kTokens: numeric("completionPricePer1kTokens").notNull(),
-  isActive: boolean("isActive").notNull().default(true),
-  updatedAt: timestamp("updatedAt").notNull(),
-});
+export const modelPricing = pgTable(
+  "ModelPricing",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    /** Glob or exact match pattern, e.g. "openai/gpt-4.1-*". */
+    modelPattern: varchar("modelPattern", { length: 200 }).notNull(),
+    /** Price in cents per 1K prompt tokens. */
+    promptPricePer1kTokens: numeric("promptPricePer1kTokens").notNull(),
+    /** Price in cents per 1K completion tokens. */
+    completionPricePer1kTokens: numeric("completionPricePer1kTokens").notNull(),
+    isActive: boolean("isActive").notNull().default(true),
+    /** Organisation this pricing record belongs to. */
+    orgId: uuid("orgId").references(() => organisation.id),
+    updatedAt: timestamp("updatedAt").notNull(),
+  },
+  (table) => ({
+    orgIdx: index("modelPricing_orgId_idx").on(table.orgId),
+  })
+);
 
 export type ModelPricing = InferSelectModel<typeof modelPricing>;
 
@@ -448,20 +551,28 @@ export type ModelPricing = InferSelectModel<typeof modelPricing>;
 // ---------------------------------------------------------------------------
 
 /** Whitelisted email domains that allow automatic SSO user provisioning. */
-export const allowedDomain = pgTable("AllowedDomain", {
-  id: uuid("id").primaryKey().notNull().defaultRandom(),
-  /** Email domain, e.g. "yourcompany.com". */
-  domain: varchar("domain", { length: 255 }).notNull(),
-  /** Default role assigned to auto-provisioned users. */
-  defaultRole: varchar("defaultRole", { length: 20 }).notNull().default("editor"),
-  /** Restrict to a specific SSO provider, or allow any. */
-  ssoProvider: varchar("ssoProvider", { length: 20 }).notNull().default("any"),
-  /** The admin who created this whitelist entry. */
-  createdBy: uuid("createdBy")
-    .notNull()
-    .references(() => user.id),
-  createdAt: timestamp("createdAt").notNull(),
-});
+export const allowedDomain = pgTable(
+  "AllowedDomain",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    /** Email domain, e.g. "yourcompany.com". */
+    domain: varchar("domain", { length: 255 }).notNull(),
+    /** Default role assigned to auto-provisioned users. */
+    defaultRole: varchar("defaultRole", { length: 20 }).notNull().default("editor"),
+    /** Restrict to a specific SSO provider, or allow any. */
+    ssoProvider: varchar("ssoProvider", { length: 20 }).notNull().default("any"),
+    /** The admin who created this whitelist entry. */
+    createdBy: uuid("createdBy")
+      .notNull()
+      .references(() => user.id),
+    /** Organisation this domain whitelist entry belongs to. */
+    orgId: uuid("orgId").references(() => organisation.id),
+    createdAt: timestamp("createdAt").notNull(),
+  },
+  (table) => ({
+    orgIdx: index("allowedDomain_orgId_idx").on(table.orgId),
+  })
+);
 
 export type AllowedDomain = InferSelectModel<typeof allowedDomain>;
 
@@ -470,13 +581,21 @@ export type AllowedDomain = InferSelectModel<typeof allowedDomain>;
 // ---------------------------------------------------------------------------
 
 /** Stores individual memories the AI has saved about a user. */
-export const memory = pgTable("Memory", {
-  id: uuid("id").primaryKey().notNull().defaultRandom(),
-  userId: uuid("userId")
-    .notNull()
-    .references(() => user.id),
-  content: text("content").notNull(),
-  createdAt: timestamp("createdAt").notNull(),
-});
+export const memory = pgTable(
+  "Memory",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    userId: uuid("userId")
+      .notNull()
+      .references(() => user.id),
+    content: text("content").notNull(),
+    /** Organisation this memory belongs to. */
+    orgId: uuid("orgId").references(() => organisation.id),
+    createdAt: timestamp("createdAt").notNull(),
+  },
+  (table) => ({
+    orgIdx: index("memory_orgId_idx").on(table.orgId),
+  })
+);
 
 export type Memory = InferSelectModel<typeof memory>;

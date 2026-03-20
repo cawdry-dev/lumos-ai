@@ -11,11 +11,13 @@ import { recordUsage } from "../usage";
 type RequestSuggestionsProps = {
   session: Session;
   dataStream: UIMessageStreamWriter<ChatMessage>;
+  orgId: string;
 };
 
 export const requestSuggestions = ({
   session,
   dataStream,
+  orgId,
 }: RequestSuggestionsProps) =>
   tool({
     description:
@@ -28,7 +30,7 @@ export const requestSuggestions = ({
         ),
     }),
     execute: async ({ documentId }) => {
-      const document = await getDocumentById({ id: documentId });
+      const document = await getDocumentById({ id: documentId, orgId });
 
       if (!document || !document.content) {
         return {
@@ -113,6 +115,7 @@ export const requestSuggestions = ({
             promptTokens: u.inputTokens ?? 0,
             completionTokens: u.outputTokens ?? 0,
             usageType: "suggestion",
+            orgId,
           });
         });
       }

@@ -23,6 +23,8 @@ export interface IngestDocumentInput {
   buffer: Buffer;
   /** MIME type of the uploaded file. */
   mimeType: string;
+  /** Organisation ID for data isolation. */
+  orgId: string;
 }
 
 /**
@@ -38,7 +40,7 @@ export interface IngestDocumentInput {
  * original error is re-thrown.
  */
 export async function ingestDocument(input: IngestDocumentInput): Promise<void> {
-  const { documentId, buffer, mimeType } = input;
+  const { documentId, buffer, mimeType, orgId } = input;
 
   try {
     // ------------------------------------------------------------------
@@ -81,6 +83,7 @@ export async function ingestDocument(input: IngestDocumentInput): Promise<void> 
         tokenCount: chunk.tokenCount,
         chunkIndex: chunk.index,
         metadata: {},
+        orgId,
       })),
     );
 

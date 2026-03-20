@@ -33,6 +33,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import type { ChatWithCopilot } from "@/lib/db/queries";
+import { useOrgPath } from "@/lib/org-url";
 import { fetcher } from "@/lib/utils";
 import { LoaderIcon } from "./icons";
 import { ChatItem } from "./sidebar-history-item";
@@ -90,31 +91,53 @@ const groupChatsByDate = (chats: ChatWithCopilot[]): GroupedChats => {
   );
 };
 
-export function getChatHistoryPaginationKey(
-  pageIndex: number,
-  previousPageData: ChatHistory
+/**
+ * Returns a SWR pagination key builder scoped to the given org path helper.
+ * When no `pathBuilder` is provided, falls back to root-relative paths.
+ */
+export function createChatHistoryPaginationKey(
+  pathBuilder: (p: string) => string = (p) => p,
 ) {
-  if (previousPageData && previousPageData.hasMore === false) {
-    return null;
-  }
+  return function getChatHistoryPaginationKey(
+    pageIndex: number,
+    previousPageData: ChatHistory,
+  ) {
+    if (previousPageData && previousPageData.hasMore === false) {
+      return null;
+    }
 
-  if (pageIndex === 0) {
-    return `/api/history?limit=${PAGE_SIZE}`;
-  }
+    if (pageIndex === 0) {
+      return pathBuilder(`/api/history?limit=${PAGE_SIZE}`);
+    }
 
-  const firstChatFromPage = previousPageData.chats.at(-1);
+    const firstChatFromPage = previousPageData.chats.at(-1);
 
-  if (!firstChatFromPage) {
-    return null;
-  }
+    if (!firstChatFromPage) {
+      return null;
+    }
 
-  return `/api/history?ending_before=${firstChatFromPage.id}&limit=${PAGE_SIZE}`;
+    return pathBuilder(
+      `/api/history?ending_before=${firstChatFromPage.id}&limit=${PAGE_SIZE}`,
+    );
+  };
 }
+
+/** @deprecated Use createChatHistoryPaginationKey with a path builder instead. */
+export const getChatHistoryPaginationKey = createChatHistoryPaginationKey();
 
 export function SidebarHistory({ user }: { user: User | undefined }) {
   const { setOpenMobile } = useSidebar();
   const pathname = usePathname();
-  const id = pathname?.startsWith("/chat/") ? pathname.split("/")[2] : null;
+  const buildPath = useOrgPath();
+
+  // Extract the chat ID from the pathname — handles both /chat/ID and /org/SLUG/chat/ID
+  const chatMatch = pathname?.match(/\/chat\/([^/]+)/);
+  const id = chatMatch ? chatMatch[1] : null;
+
+  const orgPaginationKey = useMemo(
+    () => createChatHistoryPaginationKey(buildPath),
+    [buildPath],
+  );
 
   const {
     data: paginatedChatHistories,
@@ -122,7 +145,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     isValidating,
     isLoading,
     mutate,
-  } = useSWRInfinite<ChatHistory>(getChatHistoryPaginationKey, fetcher, {
+  } = useSWRInfinite<ChatHistory>(orgPaginationKey, fetcher, {
     fallbackData: [],
   });
 
@@ -160,11 +183,11 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
 
   const handleDelete = () => {
     const chatToDelete = deleteId;
-    const isCurrentChat = pathname === `/chat/${chatToDelete}`;
+    const isCurrentChat = pathname === buildPath(`/chat/${chatToDelete}`);
 
     setShowDeleteDialog(false);
 
-    const deletePromise = fetch(`/api/chat?id=${chatToDelete}`, {
+    const deletePromise = fetch(buildPath(`/api/chat?id=${chatToDelete}`), {
       method: "DELETE",
     });
 
@@ -183,7 +206,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
         });
 
         if (isCurrentChat) {
-          router.replace("/");
+          router.replace(buildPath("/"));
           router.refresh();
         }
 

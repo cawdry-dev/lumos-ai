@@ -41,6 +41,10 @@ import {
   message,
   modelPricing,
   type ModelPricing,
+  organisation,
+  type Organisation,
+  organisationMember,
+  type OrganisationMember,
   type Suggestion,
   stream,
   suggestion,
@@ -58,12 +62,14 @@ const db = drizzle(client);
 export async function saveChat({
   id,
   userId,
+  orgId,
   title,
   visibility,
   copilotId,
 }: {
   id: string;
   userId: string;
+  orgId: string;
   title: string;
   visibility: VisibilityType;
   copilotId?: string | null;
@@ -73,6 +79,7 @@ export async function saveChat({
       id,
       createdAt: new Date(),
       userId,
+      orgId,
       title,
       visibility,
       ...(copilotId ? { copilotId } : {}),
@@ -82,7 +89,7 @@ export async function saveChat({
   }
 }
 
-export async function deleteChatById({ id }: { id: string }) {
+export async function deleteChatById({ id, orgId }: { id: string; orgId: string }) {
   try {
     await db.delete(tokenUsage).where(eq(tokenUsage.chatId, id));
     await db.delete(vote).where(eq(vote.chatId, id));
@@ -91,7 +98,7 @@ export async function deleteChatById({ id }: { id: string }) {
 
     const [chatsDeleted] = await db
       .delete(chat)
-      .where(eq(chat.id, id))
+      .where(and(eq(chat.id, id), eq(chat.orgId, orgId)))
       .returning();
     return chatsDeleted;
   } catch (_error) {
@@ -102,12 +109,12 @@ export async function deleteChatById({ id }: { id: string }) {
   }
 }
 
-export async function deleteAllChatsByUserId({ userId }: { userId: string }) {
+export async function deleteAllChatsByUserId({ userId, orgId }: { userId: string; orgId: string }) {
   try {
     const userChats = await db
       .select({ id: chat.id })
       .from(chat)
-      .where(eq(chat.userId, userId));
+      .where(and(eq(chat.userId, userId), eq(chat.orgId, orgId)));
 
     if (userChats.length === 0) {
       return { deletedCount: 0 };
@@ -122,7 +129,7 @@ export async function deleteAllChatsByUserId({ userId }: { userId: string }) {
 
     const deletedChats = await db
       .delete(chat)
-      .where(eq(chat.userId, userId))
+      .where(and(eq(chat.userId, userId), eq(chat.orgId, orgId)))
       .returning();
 
     return { deletedCount: deletedChats.length };
@@ -142,11 +149,13 @@ export type ChatWithCopilot = Chat & {
 
 export async function getChatsByUserId({
   id,
+  orgId,
   limit,
   startingAfter,
   endingBefore,
 }: {
   id: string;
+  orgId: string;
   limit: number;
   startingAfter: string | null;
   endingBefore: string | null;
@@ -158,6 +167,7 @@ export async function getChatsByUserId({
       db
         .select({
           id: chat.id,
+          orgId: chat.orgId,
           createdAt: chat.createdAt,
           title: chat.title,
           userId: chat.userId,
@@ -170,8 +180,8 @@ export async function getChatsByUserId({
         .leftJoin(copilot, eq(chat.copilotId, copilot.id))
         .where(
           whereCondition
-            ? and(whereCondition, eq(chat.userId, id))
-            : eq(chat.userId, id)
+            ? and(whereCondition, eq(chat.userId, id), eq(chat.orgId, orgId))
+            : and(eq(chat.userId, id), eq(chat.orgId, orgId))
         )
         .orderBy(desc(chat.createdAt))
         .limit(extendedLimit);
@@ -226,9 +236,11 @@ export async function getChatsByUserId({
   }
 }
 
-export async function getChatById({ id }: { id: string }) {
+export async function getChatById({ id, orgId }: { id: string; orgId?: string }) {
   try {
-    const [selectedChat] = await db.select().from(chat).where(eq(chat.id, id));
+    const conditions = [eq(chat.id, id)];
+    if (orgId) conditions.push(eq(chat.orgId, orgId));
+    const [selectedChat] = await db.select().from(chat).where(and(...conditions));
     if (!selectedChat) {
       return null;
     }
@@ -324,12 +336,14 @@ export async function saveDocument({
   kind,
   content,
   userId,
+  orgId,
 }: {
   id: string;
   title: string;
   kind: ArtifactKind;
   content: string;
   userId: string;
+  orgId: string;
 }) {
   try {
     return await db
@@ -340,6 +354,7 @@ export async function saveDocument({
         kind,
         content,
         userId,
+        orgId,
         createdAt: new Date(),
       })
       .returning();
@@ -348,12 +363,12 @@ export async function saveDocument({
   }
 }
 
-export async function getDocumentsById({ id }: { id: string }) {
+export async function getDocumentsById({ id, orgId }: { id: string; orgId: string }) {
   try {
     const documents = await db
       .select()
       .from(document)
-      .where(eq(document.id, id))
+      .where(and(eq(document.id, id), eq(document.orgId, orgId)))
       .orderBy(asc(document.createdAt));
 
     return documents;
@@ -365,12 +380,12 @@ export async function getDocumentsById({ id }: { id: string }) {
   }
 }
 
-export async function getDocumentById({ id }: { id: string }) {
+export async function getDocumentById({ id, orgId }: { id: string; orgId: string }) {
   try {
     const [selectedDocument] = await db
       .select()
       .from(document)
-      .where(eq(document.id, id))
+      .where(and(eq(document.id, id), eq(document.orgId, orgId)))
       .orderBy(desc(document.createdAt));
 
     return selectedDocument;
@@ -384,9 +399,11 @@ export async function getDocumentById({ id }: { id: string }) {
 
 export async function deleteDocumentsByIdAfterTimestamp({
   id,
+  orgId,
   timestamp,
 }: {
   id: string;
+  orgId: string;
   timestamp: Date;
 }) {
   try {
@@ -401,7 +418,7 @@ export async function deleteDocumentsByIdAfterTimestamp({
 
     return await db
       .delete(document)
-      .where(and(eq(document.id, id), gt(document.createdAt, timestamp)))
+      .where(and(eq(document.id, id), eq(document.orgId, orgId), gt(document.createdAt, timestamp)))
       .returning();
   } catch (_error) {
     throw new ChatbotError(
@@ -497,13 +514,15 @@ export async function deleteMessagesByChatIdAfterTimestamp({
 
 export async function updateChatVisibilityById({
   chatId,
+  orgId,
   visibility,
 }: {
   chatId: string;
+  orgId: string;
   visibility: "private" | "public";
 }) {
   try {
-    return await db.update(chat).set({ visibility }).where(eq(chat.id, chatId));
+    return await db.update(chat).set({ visibility }).where(and(eq(chat.id, chatId), eq(chat.orgId, orgId)));
   } catch (_error) {
     throw new ChatbotError(
       "bad_request:database",
@@ -514,13 +533,15 @@ export async function updateChatVisibilityById({
 
 export async function updateChatTitleById({
   chatId,
+  orgId,
   title,
 }: {
   chatId: string;
+  orgId: string;
   title: string;
 }) {
   try {
-    return await db.update(chat).set({ title }).where(eq(chat.id, chatId));
+    return await db.update(chat).set({ title }).where(and(eq(chat.id, chatId), eq(chat.orgId, orgId)));
   } catch (error) {
     console.warn("Failed to update title for chat", chatId, error);
     return;
@@ -599,9 +620,17 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
 }
 
 
-/** Returns the total number of users in the User table. */
-export async function getUserCount(): Promise<number> {
+/** Returns the total number of users, optionally scoped to an organisation. */
+export async function getUserCount(orgId?: string): Promise<number> {
   try {
+    if (orgId) {
+      const [result] = await db
+        .select({ count: count(organisationMember.userId) })
+        .from(organisationMember)
+        .where(eq(organisationMember.orgId, orgId))
+        .execute();
+      return result?.count ?? 0;
+    }
     const [result] = await db
       .select({ count: count(user.id) })
       .from(user)
@@ -624,6 +653,7 @@ export async function createProfile({
   invitedBy,
   ssoProvider,
   displayName,
+  isGlobalAdmin,
 }: {
   id: string;
   email: string;
@@ -631,6 +661,7 @@ export async function createProfile({
   invitedBy?: string | null;
   ssoProvider?: string | null;
   displayName?: string | null;
+  isGlobalAdmin?: boolean;
 }) {
   try {
     return await db.insert(user).values({
@@ -641,6 +672,7 @@ export async function createProfile({
       invitedAt: invitedBy ? new Date() : undefined,
       ssoProvider: ssoProvider ?? undefined,
       displayName: displayName ?? undefined,
+      isGlobalAdmin: isGlobalAdmin ?? false,
     });
   } catch (_error) {
     throw new ChatbotError(
@@ -706,6 +738,7 @@ export async function createInvitation({
   token,
   expiresAt,
   displayName,
+  orgId,
 }: {
   email: string;
   role: string;
@@ -713,6 +746,7 @@ export async function createInvitation({
   token: string;
   expiresAt: Date;
   displayName?: string | null;
+  orgId: string;
 }) {
   try {
     const [created] = await db
@@ -724,6 +758,7 @@ export async function createInvitation({
         token,
         createdAt: new Date(),
         expiresAt,
+        orgId,
         displayName: displayName ?? undefined,
       })
       .returning();
@@ -763,10 +798,10 @@ export async function getInvitationByToken(token: string) {
   }
 }
 
-/** Returns all enabled model rows from the EnabledModel table. */
-export async function getEnabledModels() {
+/** Returns all enabled model rows for an organisation. */
+export async function getEnabledModels(orgId: string) {
   try {
-    return await db.select().from(enabledModel);
+    return await db.select().from(enabledModel).where(eq(enabledModel.orgId, orgId));
   } catch (_error) {
     throw new ChatbotError(
       "bad_request:database",
@@ -776,11 +811,11 @@ export async function getEnabledModels() {
 }
 
 /** Enables a model by upserting into the EnabledModel table. */
-export async function enableModel(id: string, userId: string) {
+export async function enableModel(id: string, userId: string, orgId: string) {
   try {
     return await db
       .insert(enabledModel)
-      .values({ id, enabledAt: new Date(), enabledBy: userId })
+      .values({ id, enabledAt: new Date(), enabledBy: userId, orgId })
       .onConflictDoNothing();
   } catch (_error) {
     throw new ChatbotError(
@@ -791,11 +826,11 @@ export async function enableModel(id: string, userId: string) {
 }
 
 /** Disables a model by removing it from the EnabledModel table. */
-export async function disableModel(id: string) {
+export async function disableModel(id: string, orgId: string) {
   try {
     return await db
       .delete(enabledModel)
-      .where(eq(enabledModel.id, id));
+      .where(and(eq(enabledModel.id, id), eq(enabledModel.orgId, orgId)));
   } catch (_error) {
     throw new ChatbotError(
       "bad_request:database",
@@ -819,10 +854,34 @@ export async function markInvitationAccepted(token: string) {
   }
 }
 
-/** Returns all users ordered by email. */
-export async function getAllUsers(): Promise<User[]> {
+/** Returns all users for an organisation, ordered by email. */
+export async function getAllUsers(orgId: string): Promise<User[]> {
   try {
-    return await db.select().from(user).orderBy(asc(user.email));
+    return await db
+      .select({
+        id: user.id,
+        email: user.email,
+        password: user.password,
+        role: user.role,
+        displayName: user.displayName,
+        mfaExempt: user.mfaExempt,
+        invitedBy: user.invitedBy,
+        invitedAt: user.invitedAt,
+        dailyCostLimitCents: user.dailyCostLimitCents,
+        monthlyCostLimitCents: user.monthlyCostLimitCents,
+        ssoProvider: user.ssoProvider,
+        accentColour: user.accentColour,
+        ttsVoice: user.ttsVoice,
+        customInstructions: user.customInstructions,
+        occupation: user.occupation,
+        aboutYou: user.aboutYou,
+        memoryEnabled: user.memoryEnabled,
+        isGlobalAdmin: user.isGlobalAdmin,
+      })
+      .from(user)
+      .innerJoin(organisationMember, eq(user.id, organisationMember.userId))
+      .where(eq(organisationMember.orgId, orgId))
+      .orderBy(asc(user.email));
   } catch (_error) {
     throw new ChatbotError("bad_request:database", "Failed to get all users");
   }
@@ -846,14 +905,15 @@ export async function updateUserRole(id: string, role: string) {
   }
 }
 
-/** Returns pending invitations (not accepted, not expired), ordered by createdAt desc. */
-export async function getPendingInvitations() {
+/** Returns pending invitations for an organisation (not accepted, not expired), ordered by createdAt desc. */
+export async function getPendingInvitations(orgId: string) {
   try {
     return await db
       .select()
       .from(invitation)
       .where(
         and(
+          eq(invitation.orgId, orgId),
           isNull(invitation.acceptedAt),
           gt(invitation.expiresAt, new Date())
         )
@@ -867,12 +927,12 @@ export async function getPendingInvitations() {
   }
 }
 
-/** Deletes an invitation by ID. */
-export async function revokeInvitation(id: string) {
+/** Deletes an invitation by ID, scoped to an organisation. */
+export async function revokeInvitation(id: string, orgId: string) {
   try {
     return await db
       .delete(invitation)
-      .where(eq(invitation.id, id));
+      .where(and(eq(invitation.id, id), eq(invitation.orgId, orgId)));
   } catch (_error) {
     throw new ChatbotError(
       "bad_request:database",
@@ -885,19 +945,23 @@ export async function revokeInvitation(id: string) {
 // Co-pilot queries
 // ---------------------------------------------------------------------------
 
-/** Returns all co-pilots ordered by name. */
-export async function getCopilots() {
+/** Returns all co-pilots for an organisation, plus global co-pilots. */
+export async function getCopilots(orgId: string) {
   try {
-    return await db.select().from(copilot).orderBy(asc(copilot.name));
+    return await db.select().from(copilot).where(
+      sql`(${copilot.orgId} = ${orgId} OR ${copilot.isGlobal} = true)`,
+    ).orderBy(asc(copilot.name));
   } catch (_error) {
     throw new ChatbotError("bad_request:database", "Failed to get co-pilots");
   }
 }
 
 /** Returns a single co-pilot by ID. */
-export async function getCopilotById(id: string) {
+export async function getCopilotById(id: string, _orgId?: string) {
   try {
-    const [row] = await db.select().from(copilot).where(eq(copilot.id, id));
+    const conditions = [eq(copilot.id, id)];
+    if (_orgId) conditions.push(eq(copilot.orgId, _orgId));
+    const [row] = await db.select().from(copilot).where(and(...conditions));
     return row ?? null;
   } catch (_error) {
     throw new ChatbotError("bad_request:database", "Failed to get co-pilot");
@@ -922,6 +986,7 @@ export async function createCopilot(values: {
   enabledTools: string[] | null;
   isActive: boolean;
   createdBy: string;
+  orgId: string;
 }) {
   try {
     const [created] = await db
@@ -941,6 +1006,7 @@ export async function createCopilot(values: {
 /** Updates a co-pilot by ID and returns it. */
 export async function updateCopilot(
   id: string,
+  orgId: string,
   values: {
     name?: string;
     description?: string;
@@ -963,7 +1029,7 @@ export async function updateCopilot(
     const [updated] = await db
       .update(copilot)
       .set({ ...values, updatedAt: new Date() })
-      .where(eq(copilot.id, id))
+      .where(and(eq(copilot.id, id), eq(copilot.orgId, orgId)))
       .returning();
     return updated ?? null;
   } catch (_error) {
@@ -972,12 +1038,12 @@ export async function updateCopilot(
 }
 
 /** Deletes a co-pilot (and cascading access rows) by ID. */
-export async function deleteCopilot(id: string) {
+export async function deleteCopilot(id: string, orgId: string) {
   try {
     await db.delete(copilotAccess).where(eq(copilotAccess.copilotId, id));
     const [deleted] = await db
       .delete(copilot)
-      .where(eq(copilot.id, id))
+      .where(and(eq(copilot.id, id), eq(copilot.orgId, orgId)))
       .returning();
     return deleted ?? null;
   } catch (_error) {
@@ -992,7 +1058,7 @@ export async function deleteCopilot(id: string) {
  * - It has no rows in `copilotAccess` (open to everyone), OR
  * - The user has an explicit `copilotAccess` row.
  */
-export async function getAvailableCopilots(userId: string): Promise<Copilot[]> {
+export async function getAvailableCopilots(userId: string, orgId: string): Promise<Copilot[]> {
   try {
     // Sub-query: co-pilot IDs that have at least one access row
     const restricted = db
@@ -1012,6 +1078,7 @@ export async function getAvailableCopilots(userId: string): Promise<Copilot[]> {
       .where(
         and(
           eq(copilot.isActive, true),
+          sql`(${copilot.orgId} = ${orgId} OR ${copilot.isGlobal} = true)`,
           sql`(${copilot.id} NOT IN (${restricted}) OR ${copilot.id} IN (${granted}))`,
         ),
       )
@@ -1031,7 +1098,7 @@ export async function getAvailableCopilots(userId: string): Promise<Copilot[]> {
 // ---------------------------------------------------------------------------
 
 /** Returns users who have explicit access to a co-pilot. */
-export async function getCopilotAccessUsers(copilotId: string) {
+export async function getCopilotAccessUsers(copilotId: string, orgId: string) {
   try {
     return await db
       .select({
@@ -1042,7 +1109,7 @@ export async function getCopilotAccessUsers(copilotId: string) {
       })
       .from(copilotAccess)
       .innerJoin(user, eq(copilotAccess.userId, user.id))
-      .where(eq(copilotAccess.copilotId, copilotId))
+      .where(and(eq(copilotAccess.copilotId, copilotId), eq(copilotAccess.orgId, orgId)))
       .orderBy(asc(user.email));
   } catch (_error) {
     throw new ChatbotError(
@@ -1056,7 +1123,8 @@ export async function getCopilotAccessUsers(copilotId: string) {
 export async function grantCopilotAccess(
   copilotId: string,
   userId: string,
-  grantedBy: string
+  grantedBy: string,
+  orgId: string
 ) {
   try {
     const [row] = await db
@@ -1065,6 +1133,7 @@ export async function grantCopilotAccess(
         copilotId,
         userId,
         grantedBy,
+        orgId,
         grantedAt: new Date(),
       })
       .onConflictDoNothing()
@@ -1079,14 +1148,15 @@ export async function grantCopilotAccess(
 }
 
 /** Revokes a user's access to a co-pilot. */
-export async function revokeCopilotAccess(copilotId: string, userId: string) {
+export async function revokeCopilotAccess(copilotId: string, userId: string, orgId: string) {
   try {
     return await db
       .delete(copilotAccess)
       .where(
         and(
           eq(copilotAccess.copilotId, copilotId),
-          eq(copilotAccess.userId, userId)
+          eq(copilotAccess.userId, userId),
+          eq(copilotAccess.orgId, orgId)
         )
       );
   } catch (_error) {
@@ -1102,12 +1172,12 @@ export async function revokeCopilotAccess(copilotId: string, userId: string) {
 // ---------------------------------------------------------------------------
 
 /** Returns all documents belonging to a co-pilot. */
-export async function getKnowledgeDocuments(copilotId: string): Promise<KnowledgeDocument[]> {
+export async function getKnowledgeDocuments(copilotId: string, orgId: string): Promise<KnowledgeDocument[]> {
   try {
     return await db
       .select()
       .from(knowledgeDocument)
-      .where(eq(knowledgeDocument.copilotId, copilotId))
+      .where(and(eq(knowledgeDocument.copilotId, copilotId), eq(knowledgeDocument.orgId, orgId)))
       .orderBy(desc(knowledgeDocument.createdAt));
   } catch (_error) {
     throw new ChatbotError(
@@ -1118,12 +1188,14 @@ export async function getKnowledgeDocuments(copilotId: string): Promise<Knowledg
 }
 
 /** Returns a single knowledge document by ID. */
-export async function getKnowledgeDocumentById(id: string): Promise<KnowledgeDocument | null> {
+export async function getKnowledgeDocumentById(id: string, orgId?: string): Promise<KnowledgeDocument | null> {
   try {
+    const conditions = [eq(knowledgeDocument.id, id)];
+    if (orgId) conditions.push(eq(knowledgeDocument.orgId, orgId));
     const [doc] = await db
       .select()
       .from(knowledgeDocument)
-      .where(eq(knowledgeDocument.id, id));
+      .where(and(...conditions));
     return doc ?? null;
   } catch (_error) {
     throw new ChatbotError(
@@ -1141,6 +1213,7 @@ export async function createKnowledgeDocument(values: {
   mimeType: string;
   storagePath: string;
   uploadedBy: string;
+  orgId: string;
 }) {
   try {
     const now = new Date();
@@ -1165,7 +1238,8 @@ export async function createKnowledgeDocument(values: {
 export async function updateKnowledgeDocumentStatus(
   id: string,
   status: "processing" | "ready" | "error",
-  chunkCount?: number
+  chunkCount?: number,
+  orgId?: string
 ) {
   try {
     const [updated] = await db
@@ -1187,12 +1261,12 @@ export async function updateKnowledgeDocumentStatus(
 }
 
 /** Deletes a knowledge document and its chunks. */
-export async function deleteKnowledgeDocument(id: string) {
+export async function deleteKnowledgeDocument(id: string, orgId: string) {
   try {
     await db.delete(knowledgeChunk).where(eq(knowledgeChunk.documentId, id));
     const [deleted] = await db
       .delete(knowledgeDocument)
-      .where(eq(knowledgeDocument.id, id))
+      .where(and(eq(knowledgeDocument.id, id), eq(knowledgeDocument.orgId, orgId)))
       .returning();
     return deleted;
   } catch (_error) {
@@ -1216,6 +1290,7 @@ export async function insertKnowledgeChunks(
     metadata?: Record<string, unknown>;
     tokenCount: number;
     chunkIndex: number;
+    orgId: string;
   }[]
 ) {
   try {
@@ -1232,12 +1307,14 @@ export async function insertKnowledgeChunks(
 }
 
 /** Returns all chunks for a given document, ordered by index. */
-export async function getKnowledgeChunksByDocumentId(documentId: string) {
+export async function getKnowledgeChunksByDocumentId(documentId: string, orgId?: string) {
   try {
+    const conditions = [eq(knowledgeChunk.documentId, documentId)];
+    if (orgId) conditions.push(eq(knowledgeChunk.orgId, orgId));
     return await db
       .select()
       .from(knowledgeChunk)
-      .where(eq(knowledgeChunk.documentId, documentId))
+      .where(and(...conditions))
       .orderBy(asc(knowledgeChunk.chunkIndex));
   } catch (_error) {
     throw new ChatbotError(
@@ -1251,6 +1328,7 @@ export async function getKnowledgeChunksByDocumentId(documentId: string) {
 export async function searchKnowledgeChunks(
   copilotId: string,
   embedding: number[],
+  orgId: string,
   limit = 10,
 ) {
   try {
@@ -1277,6 +1355,7 @@ export async function searchKnowledgeChunks(
         and(
           eq(knowledgeDocument.copilotId, copilotId),
           eq(knowledgeDocument.status, "ready"),
+          eq(knowledgeDocument.orgId, orgId),
         ),
       )
       .orderBy(
@@ -1301,9 +1380,11 @@ export async function searchKnowledgeChunks(
 export async function getUsageStats({
   from,
   to,
+  orgId,
 }: {
   from: Date;
   to: Date;
+  orgId: string;
 }) {
   try {
     const rows = await db
@@ -1326,6 +1407,7 @@ export async function getUsageStats({
       .leftJoin(copilot, eq(tokenUsage.copilotId, copilot.id))
       .where(
         and(
+          eq(tokenUsage.orgId, orgId),
           gte(tokenUsage.createdAt, from),
           lt(tokenUsage.createdAt, to),
         ),
@@ -1351,7 +1433,7 @@ export async function getUsageStats({
 }
 
 /** Period totals: aggregate prompt, completion, total tokens and cost. */
-export async function getUsagePeriodTotals({ from, to }: { from: Date; to: Date }) {
+export async function getUsagePeriodTotals({ from, to, orgId }: { from: Date; to: Date; orgId: string }) {
   try {
     const [row] = await db
       .select({
@@ -1361,7 +1443,7 @@ export async function getUsagePeriodTotals({ from, to }: { from: Date; to: Date 
         totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::float`,
       })
       .from(tokenUsage)
-      .where(and(gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)));
+      .where(and(eq(tokenUsage.orgId, orgId), gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)));
 
     return row ?? { totalPromptTokens: 0, totalCompletionTokens: 0, totalTokens: 0, totalCostCents: 0 };
   } catch (_error) {
@@ -1370,7 +1452,7 @@ export async function getUsagePeriodTotals({ from, to }: { from: Date; to: Date 
 }
 
 /** Usage aggregated by user with request count. */
-export async function getUsageByUser({ from, to }: { from: Date; to: Date }) {
+export async function getUsageByUser({ from, to, orgId }: { from: Date; to: Date; orgId: string }) {
   try {
     return await db
       .select({
@@ -1385,7 +1467,7 @@ export async function getUsageByUser({ from, to }: { from: Date; to: Date }) {
       })
       .from(tokenUsage)
       .innerJoin(user, eq(tokenUsage.userId, user.id))
-      .where(and(gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)))
+      .where(and(eq(tokenUsage.orgId, orgId), gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)))
       .groupBy(tokenUsage.userId, user.email, user.displayName);
   } catch (_error) {
     throw new ChatbotError("bad_request:database", "Failed to get usage by user");
@@ -1393,7 +1475,7 @@ export async function getUsageByUser({ from, to }: { from: Date; to: Date }) {
 }
 
 /** Usage aggregated by model with request count. */
-export async function getUsageByModel({ from, to }: { from: Date; to: Date }) {
+export async function getUsageByModel({ from, to, orgId }: { from: Date; to: Date; orgId: string }) {
   try {
     return await db
       .select({
@@ -1405,7 +1487,7 @@ export async function getUsageByModel({ from, to }: { from: Date; to: Date }) {
         requestCount: count(),
       })
       .from(tokenUsage)
-      .where(and(gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)))
+      .where(and(eq(tokenUsage.orgId, orgId), gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)))
       .groupBy(tokenUsage.modelId);
   } catch (_error) {
     throw new ChatbotError("bad_request:database", "Failed to get usage by model");
@@ -1413,7 +1495,7 @@ export async function getUsageByModel({ from, to }: { from: Date; to: Date }) {
 }
 
 /** Usage aggregated by copilot. */
-export async function getUsageByCopilot({ from, to }: { from: Date; to: Date }) {
+export async function getUsageByCopilot({ from, to, orgId }: { from: Date; to: Date; orgId: string }) {
   try {
     return await db
       .select({
@@ -1426,7 +1508,7 @@ export async function getUsageByCopilot({ from, to }: { from: Date; to: Date }) 
       })
       .from(tokenUsage)
       .leftJoin(copilot, eq(tokenUsage.copilotId, copilot.id))
-      .where(and(gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)))
+      .where(and(eq(tokenUsage.orgId, orgId), gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)))
       .groupBy(tokenUsage.copilotId, copilot.name);
   } catch (_error) {
     throw new ChatbotError("bad_request:database", "Failed to get usage by copilot");
@@ -1434,7 +1516,7 @@ export async function getUsageByCopilot({ from, to }: { from: Date; to: Date }) 
 }
 
 /** Usage aggregated by usage type with request count. */
-export async function getUsageByType({ from, to }: { from: Date; to: Date }) {
+export async function getUsageByType({ from, to, orgId }: { from: Date; to: Date; orgId: string }) {
   try {
     return await db
       .select({
@@ -1444,7 +1526,7 @@ export async function getUsageByType({ from, to }: { from: Date; to: Date }) {
         requestCount: count(),
       })
       .from(tokenUsage)
-      .where(and(gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)))
+      .where(and(eq(tokenUsage.orgId, orgId), gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)))
       .groupBy(tokenUsage.usageType);
   } catch (_error) {
     throw new ChatbotError("bad_request:database", "Failed to get usage by type");
@@ -1452,7 +1534,7 @@ export async function getUsageByType({ from, to }: { from: Date; to: Date }) {
 }
 
 /** Daily time series of token usage and cost. */
-export async function getUsageDailySeries({ from, to }: { from: Date; to: Date }) {
+export async function getUsageDailySeries({ from, to, orgId }: { from: Date; to: Date; orgId: string }) {
   try {
     return await db
       .select({
@@ -1462,7 +1544,7 @@ export async function getUsageDailySeries({ from, to }: { from: Date; to: Date }
         totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::float`,
       })
       .from(tokenUsage)
-      .where(and(gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)))
+      .where(and(eq(tokenUsage.orgId, orgId), gte(tokenUsage.createdAt, from), lt(tokenUsage.createdAt, to)))
       .groupBy(sql`DATE(${tokenUsage.createdAt})`)
       .orderBy(sql`DATE(${tokenUsage.createdAt})`);
   } catch (_error) {
@@ -1475,10 +1557,12 @@ export async function getUserCostForPeriod({
   userId: uid,
   from,
   to,
+  orgId,
 }: {
   userId: string;
   from: Date;
   to: Date;
+  orgId: string;
 }) {
   try {
     const [row] = await db
@@ -1490,6 +1574,7 @@ export async function getUserCostForPeriod({
       .where(
         and(
           eq(tokenUsage.userId, uid),
+          eq(tokenUsage.orgId, orgId),
           gte(tokenUsage.createdAt, from),
           lt(tokenUsage.createdAt, to),
         ),
@@ -1509,9 +1594,9 @@ export async function getUserCostForPeriod({
 // ---------------------------------------------------------------------------
 
 /** Returns all model pricing rules. */
-export async function getAllModelPricing() {
+export async function getAllModelPricing(orgId: string) {
   try {
-    return await db.select().from(modelPricing).orderBy(asc(modelPricing.modelPattern));
+    return await db.select().from(modelPricing).where(eq(modelPricing.orgId, orgId)).orderBy(asc(modelPricing.modelPattern));
   } catch (_error) {
     throw new ChatbotError(
       "bad_request:database",
@@ -1525,6 +1610,7 @@ export async function createModelPricing(data: {
   modelPattern: string;
   promptPricePer1kTokens: string;
   completionPricePer1kTokens: string;
+  orgId: string;
 }) {
   try {
     const [row] = await db
@@ -1533,6 +1619,7 @@ export async function createModelPricing(data: {
         modelPattern: data.modelPattern,
         promptPricePer1kTokens: data.promptPricePer1kTokens,
         completionPricePer1kTokens: data.completionPricePer1kTokens,
+        orgId: data.orgId,
         updatedAt: new Date(),
       })
       .returning();
@@ -1549,6 +1636,7 @@ export async function createModelPricing(data: {
 /** Updates an existing model pricing rule. */
 export async function updateModelPricing(
   id: string,
+  orgId: string,
   data: {
     modelPattern?: string;
     promptPricePer1kTokens?: string;
@@ -1563,7 +1651,7 @@ export async function updateModelPricing(
         ...data,
         updatedAt: new Date(),
       })
-      .where(eq(modelPricing.id, id))
+      .where(and(eq(modelPricing.id, id), eq(modelPricing.orgId, orgId)))
       .returning();
 
     return row;
@@ -1576,9 +1664,9 @@ export async function updateModelPricing(
 }
 
 /** Deletes a model pricing rule. */
-export async function deleteModelPricing(id: string) {
+export async function deleteModelPricing(id: string, orgId: string) {
   try {
-    await db.delete(modelPricing).where(eq(modelPricing.id, id));
+    await db.delete(modelPricing).where(and(eq(modelPricing.id, id), eq(modelPricing.orgId, orgId)));
   } catch (_error) {
     throw new ChatbotError(
       "bad_request:database",
@@ -1590,10 +1678,11 @@ export async function deleteModelPricing(id: string) {
 /** Finds a pricing rule by its exact model pattern. */
 export async function findPricingRuleByPattern(
   pattern: string,
+  orgId: string,
   options?: { activeOnly?: boolean },
 ): Promise<ModelPricing | null> {
   try {
-    const conditions = [eq(modelPricing.modelPattern, pattern)];
+    const conditions = [eq(modelPricing.modelPattern, pattern), eq(modelPricing.orgId, orgId)];
     if (options?.activeOnly) {
       conditions.push(eq(modelPricing.isActive, true));
     }
@@ -1618,7 +1707,7 @@ export async function findPricingRuleByPattern(
 // ---------------------------------------------------------------------------
 
 /** Gets a user's cost limits (per-user overrides). */
-export async function getUserCostLimits(uid: string) {
+export async function getUserCostLimits(uid: string, orgId: string) {
   try {
     const [row] = await db
       .select({
@@ -1629,7 +1718,8 @@ export async function getUserCostLimits(uid: string) {
         monthlyCostLimitCents: user.monthlyCostLimitCents,
       })
       .from(user)
-      .where(eq(user.id, uid));
+      .innerJoin(organisationMember, eq(user.id, organisationMember.userId))
+      .where(and(eq(user.id, uid), eq(organisationMember.orgId, orgId)));
 
     return row ?? null;
   } catch (_error) {
@@ -1643,6 +1733,7 @@ export async function getUserCostLimits(uid: string) {
 /** Sets per-user cost limit overrides. Pass null to clear (use role default). */
 export async function setUserCostLimits(
   uid: string,
+  orgId: string,
   limits: {
     dailyCostLimitCents: number | null;
     monthlyCostLimitCents: number | null;
@@ -1668,7 +1759,7 @@ export async function setUserCostLimits(
 }
 
 /** Returns all users with their cost limits for the admin user list. */
-export async function getAllUsersWithLimits() {
+export async function getAllUsersWithLimits(orgId: string) {
   try {
     return await db
       .select({
@@ -1680,11 +1771,101 @@ export async function getAllUsersWithLimits() {
         monthlyCostLimitCents: user.monthlyCostLimitCents,
       })
       .from(user)
+      .innerJoin(organisationMember, eq(user.id, organisationMember.userId))
+      .where(eq(organisationMember.orgId, orgId))
       .orderBy(asc(user.email));
   } catch (_error) {
     throw new ChatbotError(
       "bad_request:database",
       "Failed to get users with limits",
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Organisation cost limit queries
+// ---------------------------------------------------------------------------
+
+/** Returns the cost limits for an organisation, or null if not found. */
+export async function getOrgCostLimits(orgId: string) {
+  try {
+    const [row] = await db
+      .select({
+        id: organisation.id,
+        dailyCostLimitCents: organisation.dailyCostLimitCents,
+        monthlyCostLimitCents: organisation.monthlyCostLimitCents,
+        billingModel: organisation.billingModel,
+      })
+      .from(organisation)
+      .where(eq(organisation.id, orgId));
+
+    return row ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get organisation cost limits",
+    );
+  }
+}
+
+/** Sets per-organisation cost limit overrides. Pass null to clear (unlimited). */
+export async function setOrgCostLimits(
+  orgId: string,
+  limits: {
+    dailyCostLimitCents: number | null;
+    monthlyCostLimitCents: number | null;
+  },
+) {
+  try {
+    const [row] = await db
+      .update(organisation)
+      .set({
+        dailyCostLimitCents: limits.dailyCostLimitCents,
+        monthlyCostLimitCents: limits.monthlyCostLimitCents,
+        updatedAt: new Date(),
+      })
+      .where(eq(organisation.id, orgId))
+      .returning();
+
+    return row;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to set organisation cost limits",
+    );
+  }
+}
+
+/** Returns the total cost for an organisation in a given period. */
+export async function getOrgCostForPeriod({
+  orgId,
+  from,
+  to,
+}: {
+  orgId: string;
+  from: Date;
+  to: Date;
+}) {
+  try {
+    const [row] = await db
+      .select({
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::float`,
+        totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
+      })
+      .from(tokenUsage)
+      .where(
+        and(
+          eq(tokenUsage.orgId, orgId),
+          gte(tokenUsage.createdAt, from),
+          lt(tokenUsage.createdAt, to),
+        ),
+      );
+
+    return row ?? { totalCostCents: 0, totalTokens: 0 };
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get organisation cost for period",
     );
   }
 }
@@ -1704,6 +1885,7 @@ export async function insertTokenUsage(data: {
   totalTokens: number;
   estimatedCostCents: number;
   usageType: "chat" | "embedding" | "artifact" | "title" | "suggestion" | "whisper" | "tts";
+  orgId: string;
 }) {
   try {
     const [row] = await db
@@ -1725,12 +1907,12 @@ export async function insertTokenUsage(data: {
 }
 
 /** Returns all active model pricing rules. */
-export async function getActiveModelPricing(): Promise<ModelPricing[]> {
+export async function getActiveModelPricing(orgId: string): Promise<ModelPricing[]> {
   try {
     return await db
       .select()
       .from(modelPricing)
-      .where(eq(modelPricing.isActive, true));
+      .where(and(eq(modelPricing.isActive, true), eq(modelPricing.orgId, orgId)));
   } catch (_error) {
     throw new ChatbotError(
       "bad_request:database",
@@ -1788,11 +1970,12 @@ export async function setMfaExempt(
 // ---------------------------------------------------------------------------
 
 /** Returns all whitelisted domains, ordered by domain. */
-export async function getAllowedDomains(): Promise<AllowedDomain[]> {
+export async function getAllowedDomains(orgId: string): Promise<AllowedDomain[]> {
   try {
     return await db
       .select()
       .from(allowedDomain)
+      .where(eq(allowedDomain.orgId, orgId))
       .orderBy(asc(allowedDomain.domain));
   } catch (_error) {
     throw new ChatbotError(
@@ -1809,17 +1992,19 @@ export async function getAllowedDomains(): Promise<AllowedDomain[]> {
 export async function getAllowedDomainByEmail(
   emailDomain: string,
   provider: string,
+  orgId?: string,
 ): Promise<AllowedDomain | null> {
   try {
+    const conditions = [
+      eq(allowedDomain.domain, emailDomain.toLowerCase()),
+      sql`(${allowedDomain.ssoProvider} = 'any' OR ${allowedDomain.ssoProvider} = ${provider})`,
+    ];
+    if (orgId) conditions.push(eq(allowedDomain.orgId, orgId));
+
     const [row] = await db
       .select()
       .from(allowedDomain)
-      .where(
-        and(
-          eq(allowedDomain.domain, emailDomain.toLowerCase()),
-          sql`(${allowedDomain.ssoProvider} = 'any' OR ${allowedDomain.ssoProvider} = ${provider})`,
-        ),
-      );
+      .where(and(...conditions));
 
     return row ?? null;
   } catch (_error) {
@@ -1836,6 +2021,7 @@ export async function createAllowedDomain(values: {
   defaultRole: string;
   ssoProvider: string;
   createdBy: string;
+  orgId: string;
 }): Promise<AllowedDomain> {
   try {
     const [created] = await db
@@ -1845,6 +2031,7 @@ export async function createAllowedDomain(values: {
         defaultRole: values.defaultRole,
         ssoProvider: values.ssoProvider,
         createdBy: values.createdBy,
+        orgId: values.orgId,
         createdAt: new Date(),
       })
       .returning();
@@ -1859,11 +2046,11 @@ export async function createAllowedDomain(values: {
 }
 
 /** Deletes an allowed domain entry by ID. */
-export async function deleteAllowedDomain(id: string) {
+export async function deleteAllowedDomain(id: string, orgId: string) {
   try {
     return await db
       .delete(allowedDomain)
-      .where(eq(allowedDomain.id, id));
+      .where(and(eq(allowedDomain.id, id), eq(allowedDomain.orgId, orgId)));
   } catch (_error) {
     throw new ChatbotError(
       "bad_request:database",
@@ -1877,12 +2064,12 @@ export async function deleteAllowedDomain(id: string) {
 // ---------------------------------------------------------------------------
 
 /** Get all memories for a user, ordered by most recent first. */
-export async function getMemoriesByUserId(userId: string, limit = 50) {
+export async function getMemoriesByUserId(userId: string, orgId: string, limit = 50) {
   try {
     return await db
       .select()
       .from(memory)
-      .where(eq(memory.userId, userId))
+      .where(and(eq(memory.userId, userId), eq(memory.orgId, orgId)))
       .orderBy(desc(memory.createdAt))
       .limit(limit);
   } catch (_error) {
@@ -1894,13 +2081,14 @@ export async function getMemoriesByUserId(userId: string, limit = 50) {
 }
 
 /** Create a new memory for a user. */
-export async function createMemory(userId: string, content: string) {
+export async function createMemory(userId: string, content: string, orgId: string) {
   try {
     const [created] = await db
       .insert(memory)
       .values({
         userId,
         content,
+        orgId,
         createdAt: new Date(),
       })
       .returning();
@@ -1915,11 +2103,11 @@ export async function createMemory(userId: string, content: string) {
 }
 
 /** Delete a specific memory (must belong to the user). */
-export async function deleteMemory(id: string, userId: string) {
+export async function deleteMemory(id: string, userId: string, orgId: string) {
   try {
     const [deleted] = await db
       .delete(memory)
-      .where(and(eq(memory.id, id), eq(memory.userId, userId)))
+      .where(and(eq(memory.id, id), eq(memory.userId, userId), eq(memory.orgId, orgId)))
       .returning();
 
     return deleted ?? null;
@@ -1932,7 +2120,7 @@ export async function deleteMemory(id: string, userId: string) {
 }
 
 /** Search memories by content (case-insensitive ILIKE). */
-export async function searchMemories(userId: string, query: string, limit = 50) {
+export async function searchMemories(userId: string, query: string, orgId: string, limit = 50) {
   try {
     return await db
       .select()
@@ -1940,6 +2128,7 @@ export async function searchMemories(userId: string, query: string, limit = 50) 
       .where(
         and(
           eq(memory.userId, userId),
+          eq(memory.orgId, orgId),
           ilike(memory.content, `%${query}%`),
         ),
       )
@@ -1954,11 +2143,11 @@ export async function searchMemories(userId: string, query: string, limit = 50) 
 }
 
 /** Delete all memories for a user. */
-export async function deleteAllMemoriesByUserId(userId: string) {
+export async function deleteAllMemoriesByUserId(userId: string, orgId: string) {
   try {
     return await db
       .delete(memory)
-      .where(eq(memory.userId, userId));
+      .where(and(eq(memory.userId, userId), eq(memory.orgId, orgId)));
   } catch (_error) {
     throw new ChatbotError(
       "bad_request:database",
@@ -1968,12 +2157,12 @@ export async function deleteAllMemoriesByUserId(userId: string) {
 }
 
 /** Count memories for a user. */
-export async function getMemoryCount(userId: string) {
+export async function getMemoryCount(userId: string, orgId: string) {
   try {
     const [result] = await db
       .select({ count: count(memory.id) })
       .from(memory)
-      .where(eq(memory.userId, userId))
+      .where(and(eq(memory.userId, userId), eq(memory.orgId, orgId)))
       .execute();
 
     return result?.count ?? 0;
@@ -1991,7 +2180,7 @@ export async function getMemoryCount(userId: string) {
 // ---------------------------------------------------------------------------
 
 /** Returns a single user's info for the detail header. */
-export async function getUserById(uid: string) {
+export async function getUserById(uid: string, orgId: string) {
   try {
     const [row] = await db
       .select({
@@ -2003,7 +2192,8 @@ export async function getUserById(uid: string) {
         monthlyCostLimitCents: user.monthlyCostLimitCents,
       })
       .from(user)
-      .where(eq(user.id, uid));
+      .innerJoin(organisationMember, eq(user.id, organisationMember.userId))
+      .where(and(eq(user.id, uid), eq(organisationMember.orgId, orgId)));
 
     return row ?? null;
   } catch (_error) {
@@ -2019,10 +2209,12 @@ export async function getUserUsageDetail({
   userId: uid,
   from,
   to,
+  orgId,
 }: {
   userId: string;
   from: Date;
   to: Date;
+  orgId: string;
 }) {
   try {
     const rows = await db
@@ -2039,6 +2231,7 @@ export async function getUserUsageDetail({
       .where(
         and(
           eq(tokenUsage.userId, uid),
+          eq(tokenUsage.orgId, orgId),
           gte(tokenUsage.createdAt, from),
           lt(tokenUsage.createdAt, to),
         ),
@@ -2063,12 +2256,14 @@ export async function getUserUsageLog({
   userId: uid,
   from,
   to,
+  orgId,
   limit: lim = 50,
   offset = 0,
 }: {
   userId: string;
   from: Date;
   to: Date;
+  orgId: string;
   limit?: number;
   offset?: number;
 }) {
@@ -2088,6 +2283,7 @@ export async function getUserUsageLog({
       .where(
         and(
           eq(tokenUsage.userId, uid),
+          eq(tokenUsage.orgId, orgId),
           gte(tokenUsage.createdAt, from),
           lt(tokenUsage.createdAt, to),
         ),
@@ -2276,6 +2472,404 @@ export async function deleteUser(userId: string) {
     throw new ChatbotError(
       "bad_request:database",
       "Failed to delete user and related data",
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Organisation queries
+// ---------------------------------------------------------------------------
+
+/** Returns an organisation by its URL slug, or null if not found. */
+export async function getOrganizationBySlug(
+  slug: string,
+): Promise<Organisation | null> {
+  try {
+    const [row] = await db
+      .select()
+      .from(organisation)
+      .where(eq(organisation.slug, slug));
+
+    return row ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get organisation by slug",
+    );
+  }
+}
+
+/** Returns all organisations a user belongs to, with their membership role. */
+export async function getOrganizationsByUserId(userId: string) {
+  try {
+    return await db
+      .select({
+        id: organisation.id,
+        name: organisation.name,
+        slug: organisation.slug,
+        billingModel: organisation.billingModel,
+        role: organisationMember.role,
+        joinedAt: organisationMember.joinedAt,
+      })
+      .from(organisationMember)
+      .innerJoin(organisation, eq(organisationMember.orgId, organisation.id))
+      .where(eq(organisationMember.userId, userId))
+      .orderBy(asc(organisation.name));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get organisations by user id",
+    );
+  }
+}
+
+/** Returns a user's membership record for a given organisation, or null. */
+export async function getOrganizationMembership(
+  orgId: string,
+  userId: string,
+): Promise<OrganisationMember | null> {
+  try {
+    const [row] = await db
+      .select()
+      .from(organisationMember)
+      .where(
+        and(
+          eq(organisationMember.orgId, orgId),
+          eq(organisationMember.userId, userId),
+        ),
+      );
+
+    return row ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get organisation membership",
+    );
+  }
+}
+
+/** Creates a new organisation and returns it. */
+export async function createOrganization(values: {
+  name: string;
+  slug: string;
+  billingModel?: string;
+}): Promise<Organisation> {
+  try {
+    const now = new Date();
+    const [created] = await db
+      .insert(organisation)
+      .values({
+        name: values.name,
+        slug: values.slug,
+        billingModel: values.billingModel ?? "per_token",
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+
+    return created;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to create organisation",
+    );
+  }
+}
+
+/** Adds a user as a member of an organisation. */
+export async function addOrganizationMember(values: {
+  orgId: string;
+  userId: string;
+  role: "owner" | "admin" | "member";
+}): Promise<OrganisationMember> {
+  try {
+    const [created] = await db
+      .insert(organisationMember)
+      .values({
+        orgId: values.orgId,
+        userId: values.userId,
+        role: values.role,
+        joinedAt: new Date(),
+      })
+      .returning();
+
+    return created;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to add organisation member",
+    );
+  }
+}
+
+/** Removes a user from an organisation. */
+export async function removeOrganizationMember(
+  orgId: string,
+  userId: string,
+) {
+  try {
+    return await db
+      .delete(organisationMember)
+      .where(
+        and(
+          eq(organisationMember.orgId, orgId),
+          eq(organisationMember.userId, userId),
+        ),
+      );
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to remove organisation member",
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Global admin queries
+// ---------------------------------------------------------------------------
+
+/** Returns all organisations with their member count. */
+export async function getAllOrganizations() {
+  try {
+    return await db
+      .select({
+        id: organisation.id,
+        name: organisation.name,
+        slug: organisation.slug,
+        billingModel: organisation.billingModel,
+        createdAt: organisation.createdAt,
+        updatedAt: organisation.updatedAt,
+        memberCount: count(organisationMember.userId),
+      })
+      .from(organisation)
+      .leftJoin(organisationMember, eq(organisation.id, organisationMember.orgId))
+      .groupBy(
+        organisation.id,
+        organisation.name,
+        organisation.slug,
+        organisation.billingModel,
+        organisation.createdAt,
+        organisation.updatedAt,
+      )
+      .orderBy(asc(organisation.name));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get all organisations",
+    );
+  }
+}
+
+/** Returns a single organisation by ID. */
+export async function getOrganizationById(
+  orgId: string,
+): Promise<Organisation | null> {
+  try {
+    const [row] = await db
+      .select()
+      .from(organisation)
+      .where(eq(organisation.id, orgId));
+
+    return row ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get organisation by id",
+    );
+  }
+}
+
+/** Updates an organisation's details. */
+export async function updateOrganization(
+  orgId: string,
+  data: {
+    name?: string;
+    slug?: string;
+    billingModel?: string;
+  },
+) {
+  try {
+    const [updated] = await db
+      .update(organisation)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(organisation.id, orgId))
+      .returning();
+
+    return updated ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to update organisation",
+    );
+  }
+}
+
+/** Returns all users across all organisations with their org memberships. */
+export async function getAllUsersGlobal() {
+  try {
+    const users = await db
+      .select({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        displayName: user.displayName,
+        isGlobalAdmin: user.isGlobalAdmin,
+        mfaExempt: user.mfaExempt,
+      })
+      .from(user)
+      .orderBy(asc(user.email));
+
+    // Fetch org memberships for all users
+    const memberships = await db
+      .select({
+        userId: organisationMember.userId,
+        orgId: organisation.id,
+        orgName: organisation.name,
+        orgSlug: organisation.slug,
+        role: organisationMember.role,
+      })
+      .from(organisationMember)
+      .innerJoin(organisation, eq(organisationMember.orgId, organisation.id))
+      .orderBy(asc(organisation.name));
+
+    // Group memberships by user
+    const membershipMap = new Map<string, typeof memberships>();
+    for (const m of memberships) {
+      const existing = membershipMap.get(m.userId) ?? [];
+      existing.push(m);
+      membershipMap.set(m.userId, existing);
+    }
+
+    return users.map((u) => ({
+      ...u,
+      organisations: membershipMap.get(u.id) ?? [],
+    }));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get all users globally",
+    );
+  }
+}
+
+/** Toggles the global admin status for a user. */
+export async function setGlobalAdminStatus(
+  userId: string,
+  isAdmin: boolean,
+) {
+  try {
+    const [updated] = await db
+      .update(user)
+      .set({ isGlobalAdmin: isAdmin })
+      .where(eq(user.id, userId))
+      .returning();
+
+    return updated ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to set global admin status",
+    );
+  }
+}
+
+/** Returns aggregate usage stats across all organisations. */
+export async function getGlobalUsageStats() {
+  try {
+    const [row] = await db
+      .select({
+        totalTokens: sql<number>`COALESCE(SUM(${tokenUsage.totalTokens}), 0)::int`,
+        totalCostCents: sql<number>`COALESCE(SUM(${tokenUsage.estimatedCostCents}), 0)::float`,
+        requestCount: count(),
+      })
+      .from(tokenUsage);
+
+    const [orgCount] = await db
+      .select({ count: count(organisation.id) })
+      .from(organisation);
+
+    const [userCount] = await db
+      .select({ count: count(user.id) })
+      .from(user);
+
+    return {
+      totalTokens: row?.totalTokens ?? 0,
+      totalCostCents: row?.totalCostCents ?? 0,
+      requestCount: row?.requestCount ?? 0,
+      organisationCount: orgCount?.count ?? 0,
+      userCount: userCount?.count ?? 0,
+    };
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get global usage stats",
+    );
+  }
+}
+
+/** Returns members of a specific organisation. */
+export async function getOrganizationMembers(orgId: string) {
+  try {
+    return await db
+      .select({
+        userId: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        role: organisationMember.role,
+        joinedAt: organisationMember.joinedAt,
+      })
+      .from(organisationMember)
+      .innerJoin(user, eq(organisationMember.userId, user.id))
+      .where(eq(organisationMember.orgId, orgId))
+      .orderBy(asc(user.email));
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get organisation members",
+    );
+  }
+}
+
+/** Returns a user by their email address, or null if not found. */
+export async function getUserByEmail(email: string): Promise<User | null> {
+  try {
+    const [row] = await db
+      .select()
+      .from(user)
+      .where(eq(user.email, email));
+
+    return row ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to get user by email",
+    );
+  }
+}
+
+/** Updates a member's role within an organisation. */
+export async function updateOrganizationMemberRole(
+  orgId: string,
+  userId: string,
+  role: "owner" | "admin" | "member",
+): Promise<OrganisationMember | null> {
+  try {
+    const [updated] = await db
+      .update(organisationMember)
+      .set({ role })
+      .where(
+        and(
+          eq(organisationMember.orgId, orgId),
+          eq(organisationMember.userId, userId),
+        ),
+      )
+      .returning();
+
+    return updated ?? null;
+  } catch (_error) {
+    throw new ChatbotError(
+      "bad_request:database",
+      "Failed to update organisation member role",
     );
   }
 }

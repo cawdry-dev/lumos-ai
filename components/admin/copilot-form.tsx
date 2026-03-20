@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useOrgPath } from "@/lib/org-url";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,7 @@ export function CopilotForm({
   initialData?: Partial<CopilotFormData> & { id?: string };
 }) {
   const router = useRouter();
+  const buildPath = useOrgPath();
   const isEditing = !!initialData?.id;
   const [data, setData] = useState<CopilotFormData>({
     ...DEFAULTS,
@@ -95,7 +97,7 @@ export function CopilotForm({
   useEffect(() => {
     async function fetchModels() {
       try {
-        const res = await fetch("/api/admin/models");
+        const res = await fetch(buildPath("/api/admin/models"));
         if (!res.ok) return;
         const json = await res.json();
         const models = json.models as ChatModel[];
@@ -129,7 +131,7 @@ export function CopilotForm({
     }
     setSaving(true);
     try {
-      const url = isEditing ? `/api/copilots/${initialData!.id}` : "/api/copilots";
+      const url = isEditing ? buildPath(`/api/copilots/${initialData!.id}`) : buildPath("/api/copilots");
       const method = isEditing ? "PUT" : "POST";
       const res = await fetch(url, {
         method,
@@ -170,7 +172,7 @@ export function CopilotForm({
       const json = await res.json();
       toast({ type: "success", description: isEditing ? "Co-pilot updated." : "Co-pilot created." });
       if (!isEditing) {
-        router.push(`/admin/copilots/${json.copilot.id}`);
+        router.push(buildPath(`/admin/copilots/${json.copilot.id}`));
       } else {
         router.refresh();
       }
@@ -562,7 +564,7 @@ export function CopilotForm({
         <Button
           type="button"
           variant="outline"
-          onClick={() => router.push("/admin/copilots")}
+          onClick={() => router.push(buildPath("/admin/copilots"))}
         >
           Cancel
         </Button>
@@ -576,6 +578,7 @@ export function CopilotForm({
 
 /** Small inline component for the "Test Connection" button. */
 function TestConnectionButton({ data }: { data: CopilotFormData }) {
+  const buildPath = useOrgPath();
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; error?: string } | null>(null);
 
@@ -587,7 +590,7 @@ function TestConnectionButton({ data }: { data: CopilotFormData }) {
     setTesting(true);
     setResult(null);
     try {
-      const res = await fetch("/api/copilots/test-connection", {
+      const res = await fetch(buildPath("/api/copilots/test-connection"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

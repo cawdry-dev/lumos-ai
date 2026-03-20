@@ -19,6 +19,7 @@ import { sheetArtifact } from "@/artifacts/sheet/client";
 import { textArtifact } from "@/artifacts/text/client";
 import { useArtifact } from "@/hooks/use-artifact";
 import type { Document, Vote } from "@/lib/db/schema";
+import { useOrgPath } from "@/lib/org-url";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { fetcher } from "@/lib/utils";
 import { ArtifactActions } from "./artifact-actions";
@@ -105,6 +106,7 @@ function PureArtifact({
   modelLocked?: boolean;
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
+  const buildPath = useOrgPath();
 
   const {
     data: documents,
@@ -112,7 +114,7 @@ function PureArtifact({
     mutate: mutateDocuments,
   } = useSWR<Document[]>(
     artifact.documentId !== "init" && artifact.status !== "streaming"
-      ? `/api/document?id=${artifact.documentId}`
+      ? buildPath(`/api/document?id=${artifact.documentId}`)
       : null,
     fetcher
   );
@@ -152,7 +154,7 @@ function PureArtifact({
       }
 
       mutate<Document[]>(
-        `/api/document?id=${artifact.documentId}`,
+        buildPath(`/api/document?id=${artifact.documentId}`),
         async (currentDocuments) => {
           if (!currentDocuments) {
             return [];
@@ -166,7 +168,7 @@ function PureArtifact({
           }
 
           if (currentDocument.content !== updatedContent) {
-            await fetch(`/api/document?id=${artifact.documentId}`, {
+            await fetch(buildPath(`/api/document?id=${artifact.documentId}`), {
               method: "POST",
               body: JSON.stringify({
                 title: artifact.title,

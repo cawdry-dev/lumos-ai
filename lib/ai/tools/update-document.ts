@@ -9,9 +9,10 @@ type UpdateDocumentProps = {
   session: Session;
   dataStream: UIMessageStreamWriter<ChatMessage>;
   selectedChatModel?: string;
+  orgId: string;
 };
 
-export const updateDocument = ({ session, dataStream, selectedChatModel }: UpdateDocumentProps) =>
+export const updateDocument = ({ session, dataStream, selectedChatModel, orgId }: UpdateDocumentProps) =>
   tool({
     description: "Update a document with the given description.",
     inputSchema: z.object({
@@ -21,7 +22,7 @@ export const updateDocument = ({ session, dataStream, selectedChatModel }: Updat
         .describe("The description of changes that need to be made"),
     }),
     execute: async ({ id, description }) => {
-      const document = await getDocumentById({ id });
+      const document = await getDocumentById({ id, orgId });
 
       if (!document) {
         return {

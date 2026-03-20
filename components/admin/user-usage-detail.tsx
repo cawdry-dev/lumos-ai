@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useOrgPath } from "@/lib/org-url";
 import { toast } from "@/components/toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,7 @@ function LimitBar({ label, usedCents, limitCents }: { label: string; usedCents: 
 }
 
 export function UserUsageDetail({ userId }: { userId: string }) {
+  const buildPath = useOrgPath();
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const today = new Date();
@@ -51,7 +53,7 @@ export function UserUsageDetail({ userId }: { userId: string }) {
       const from = new Date(fromDate);
       const to = new Date(toDate);
       to.setDate(to.getDate() + 1);
-      const res = await fetch(`/api/admin/usage/user/${userId}?from=${from.toISOString()}&to=${to.toISOString()}`);
+      const res = await fetch(buildPath(`/api/admin/usage/user/${userId}?from=${from.toISOString()}&to=${to.toISOString()}`));
       if (!res.ok) { toast({ type: "error", description: "Failed to load user usage data." }); return; }
       setData(await res.json());
     } catch { toast({ type: "error", description: "Failed to load user usage data." }); }

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { useCopyToClipboard } from "usehooks-ts";
 import type { Vote } from "@/lib/db/schema";
+import { useOrgPath } from "@/lib/org-url";
 import type { ChatMessage } from "@/lib/types";
 import { Action, Actions } from "./elements/actions";
 import { CopyIcon, PencilEditIcon, ThumbDownIcon, ThumbUpIcon } from "./icons";
@@ -24,6 +25,7 @@ export function PureMessageActions({
 }) {
   const isAssistant = message.role === "assistant";
   const { mutate } = useSWRConfig();
+  const buildPath = useOrgPath();
   const [_, copyToClipboard] = useCopyToClipboard();
 
   if (isLoading) {
@@ -83,7 +85,7 @@ export function PureMessageActions({
         data-testid="message-upvote"
         disabled={vote?.isUpvoted}
         onClick={() => {
-          const upvote = fetch("/api/vote", {
+          const upvote = fetch(buildPath("/api/vote"), {
             method: "PATCH",
             body: JSON.stringify({
               chatId,
@@ -132,7 +134,7 @@ export function PureMessageActions({
         data-testid="message-downvote"
         disabled={vote && !vote.isUpvoted}
         onClick={() => {
-          const downvote = fetch("/api/vote", {
+          const downvote = fetch(buildPath("/api/vote"), {
             method: "PATCH",
             body: JSON.stringify({
               chatId,

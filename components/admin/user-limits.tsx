@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useOrgPath } from "@/lib/org-url";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +32,7 @@ function formatLimit(cents: number | null): string {
 }
 
 export function UserLimits({ users: initialUsers }: { users: UserWithLimits[] }) {
+  const buildPath = useOrgPath();
   const [users, setUsers] = useState(initialUsers);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserWithLimits | null>(null);
@@ -51,7 +53,7 @@ export function UserLimits({ users: initialUsers }: { users: UserWithLimits[] })
     const monthlyCostLimitCents = monthlyLimit.trim() ? Math.round(Number(monthlyLimit) * 100) : null;
 
     try {
-      const res = await fetch(`/api/admin/users/${editingUser.id}/limits`, {
+      const res = await fetch(buildPath(`/api/admin/users/${editingUser.id}/limits`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dailyCostLimitCents, monthlyCostLimitCents }),

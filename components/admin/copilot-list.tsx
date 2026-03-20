@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useOrgPath } from "@/lib/org-url";
 import { toast } from "@/components/toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,13 +28,14 @@ export type CopilotRow = {
 };
 
 export function CopilotList({ copilots }: { copilots: CopilotRow[] }) {
+  const buildPath = useOrgPath();
   const [list, setList] = useState(copilots);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/copilots/${id}`, { method: "DELETE" });
+      const res = await fetch(buildPath(`/api/copilots/${id}`), { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json();
         toast({ type: "error", description: data.error ?? "Failed to delete co-pilot." });
@@ -79,7 +81,7 @@ export function CopilotList({ copilots }: { copilots: CopilotRow[] }) {
               <td className="py-3 text-right">
                 <div className="flex items-center justify-end gap-1">
                   <Button variant="ghost" size="icon-sm" asChild>
-                    <Link href={`/admin/copilots/${c.id}`}>
+                    <Link href={buildPath(`/admin/copilots/${c.id}`)}>
                       <Pencil className="size-4" />
                     </Link>
                   </Button>

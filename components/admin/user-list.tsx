@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { Trash2 } from "lucide-react";
+import { useOrgPath } from "@/lib/org-url";
 import { toast } from "@/components/toast";
 import {
   Select,
@@ -42,15 +43,17 @@ function formatLimit(cents: number | null | undefined): string {
 export function UserList({
   users,
   currentUserId,
+
 }: {
   users: UserRow[];
   currentUserId: string;
 }) {
+  const buildPath = useOrgPath();
   const [userList, setUserList] = useState(users);
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
-      const res = await fetch("/api/admin/users", {
+      const res = await fetch(buildPath("/api/admin/users"), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, role: newRole }),
@@ -85,7 +88,7 @@ export function UserList({
     setMemoryLoading(true);
     setClearConfirm(false);
     try {
-      const res = await fetch(`/api/admin/users/${userId}/memory`);
+      const res = await fetch(buildPath(`/api/admin/users/${userId}/memory`));
       if (!res.ok) {
         toast({ type: "error", description: "Failed to fetch memory status." });
         setMemoryDialogUserId(null);
@@ -105,7 +108,7 @@ export function UserList({
     if (!memoryDialogUserId || !memoryStatus) return;
     setMemoryLoading(true);
     try {
-      const res = await fetch(`/api/admin/users/${memoryDialogUserId}/memory`, {
+      const res = await fetch(buildPath(`/api/admin/users/${memoryDialogUserId}/memory`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ memoryEnabled: !memoryStatus.memoryEnabled }),
@@ -133,7 +136,7 @@ export function UserList({
     if (!memoryDialogUserId) return;
     setMemoryLoading(true);
     try {
-      const res = await fetch(`/api/admin/users/${memoryDialogUserId}/memory`, {
+      const res = await fetch(buildPath(`/api/admin/users/${memoryDialogUserId}/memory`), {
         method: "DELETE",
       });
       if (!res.ok) {
@@ -158,7 +161,7 @@ export function UserList({
     if (!deleteDialogUser) return;
     setDeleteLoading(true);
     try {
-      const res = await fetch("/api/admin/users", {
+      const res = await fetch(buildPath("/api/admin/users"), {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: deleteDialogUser.id }),
@@ -183,7 +186,7 @@ export function UserList({
 
   const handleMfaExemptToggle = async (userId: string, exempt: boolean) => {
     try {
-      const res = await fetch(`/api/admin/users/${userId}/mfa`, {
+      const res = await fetch(buildPath(`/api/admin/users/${userId}/mfa`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mfaExempt: exempt }),

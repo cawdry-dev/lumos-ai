@@ -13,7 +13,7 @@ import { generateEmbeddings } from "@/lib/rag/embeddings";
  * base for the most relevant chunks, and returns them with source
  * document titles so the LLM can cite its sources.
  */
-export function searchKnowledge({ copilotId }: { copilotId: string }) {
+export function searchKnowledge({ copilotId, orgId }: { copilotId: string; orgId: string }) {
   return tool({
     description:
       "Search the knowledge base for relevant information. Use this when the user asks about internal topics.",
@@ -34,6 +34,7 @@ export function searchKnowledge({ copilotId }: { copilotId: string }) {
       const chunks = await searchKnowledgeChunks(
         copilotId,
         embeddingResult.embedding,
+        orgId,
         5,
       );
 

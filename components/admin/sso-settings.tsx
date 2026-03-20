@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useOrgPath } from "@/lib/org-url";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,8 +19,10 @@ type AllowedDomainRow = {
 export function SsoSettings({
   initialDomains,
 }: {
+
   initialDomains: AllowedDomainRow[];
 }) {
+  const buildPath = useOrgPath();
   const [domains, setDomains] = useState<AllowedDomainRow[]>(initialDomains);
   const [newDomain, setNewDomain] = useState("");
   const [newRole, setNewRole] = useState("editor");
@@ -31,7 +34,7 @@ export function SsoSettings({
 
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/sso", {
+      const res = await fetch(buildPath("/api/admin/sso"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -60,7 +63,7 @@ export function SsoSettings({
 
   const handleRemove = async (id: string) => {
     try {
-      const res = await fetch("/api/admin/sso", {
+      const res = await fetch(buildPath("/api/admin/sso"), {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
