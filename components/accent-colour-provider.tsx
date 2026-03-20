@@ -7,7 +7,7 @@ import {
   useEffect,
   useState,
 } from "react";
-import { useOrgPath } from "@/lib/org-url";
+import { useOrgSlug, useOrgPath } from "@/lib/org-url";
 
 const DEFAULT_ACCENT = "#6366f1";
 const LS_KEY = "accent-colour";
@@ -90,6 +90,7 @@ export function AccentColourProvider({
 }: {
   children: React.ReactNode;
 }) {
+  const slug = useOrgSlug();
   const buildPath = useOrgPath();
   const [accentColour, setAccentColourState] = useState(DEFAULT_ACCENT);
 
@@ -102,6 +103,9 @@ export function AccentColourProvider({
     } else {
       applyAccentVars(DEFAULT_ACCENT);
     }
+
+    // Only fetch org-scoped settings when inside an org route
+    if (!slug) return;
 
     // Fetch accent colour from profile for cross-device sync
     fetch(buildPath("/api/settings"))
@@ -116,7 +120,7 @@ export function AccentColourProvider({
       .catch(() => {
         // Silently fall back to localStorage value
       });
-  }, []);
+  }, [slug]);
 
   // Re-apply vars when accent changes
   useEffect(() => {

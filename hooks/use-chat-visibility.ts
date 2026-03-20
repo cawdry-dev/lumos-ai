@@ -50,7 +50,7 @@ export function useChatVisibility({
     updateChatVisibility({
       chatId,
       visibility: updatedVisibilityType,
-      slug,
+      slug: slug!,
     });
   };
 
