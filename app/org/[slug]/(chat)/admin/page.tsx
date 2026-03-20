@@ -24,10 +24,11 @@ export default async function AdminPage({
   const { slug } = await params;
   await connection();
   // Auth is already checked in layout, but we need the session for the current user ID
-  const session = (await auth())!;
+  const session = (await auth(slug))!;
+  const orgId = session.org!.id;
   const [users, invitations] = await Promise.all([
-    getAllUsers(),
-    getPendingInvitations(),
+    getAllUsers(orgId),
+    getPendingInvitations(orgId),
   ]);
 
   const serialisedInvitations = invitations.map((inv) => ({

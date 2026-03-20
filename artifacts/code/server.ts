@@ -39,7 +39,7 @@ export const codeDocumentHandler = createDocumentHandler<"code">({
     }
 
     // Record artifact creation token usage
-    if (session.user?.id) {
+    if (session.user?.id && session.org?.id) {
       usage.then((u) => {
         recordUsage({
           userId: session.user.id,
@@ -47,6 +47,7 @@ export const codeDocumentHandler = createDocumentHandler<"code">({
           promptTokens: u.inputTokens ?? 0,
           completionTokens: u.outputTokens ?? 0,
           usageType: "artifact",
+          orgId: session.org!.id,
         });
       });
     }
@@ -85,7 +86,7 @@ export const codeDocumentHandler = createDocumentHandler<"code">({
     }
 
     // Record artifact update token usage
-    if (session.user?.id) {
+    if (session.user?.id && session.org?.id) {
       usage.then((u) => {
         recordUsage({
           userId: session.user.id,
@@ -93,6 +94,7 @@ export const codeDocumentHandler = createDocumentHandler<"code">({
           promptTokens: u.inputTokens ?? 0,
           completionTokens: u.outputTokens ?? 0,
           usageType: "artifact",
+          orgId: session.org!.id,
         });
       });
     }

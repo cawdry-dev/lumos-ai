@@ -24,13 +24,14 @@ export default function Page(props: { params: Promise<{ slug: string; id: string
 async function ChatPage({ params }: { params: Promise<{ slug: string; id: string }> }) {
   await connection();
   const { slug, id } = await params;
-  const chat = await getChatById({ id });
+  const session = await auth(slug);
+  const orgId = session?.org?.id;
+
+  const chat = await getChatById({ id, orgId });
 
   if (!chat) {
     redirect(orgPath(slug, "/"));
   }
-
-  const session = await auth();
 
   if (!session) {
     redirect("/login");
@@ -54,7 +55,7 @@ async function ChatPage({ params }: { params: Promise<{ slug: string; id: string
 
   const cookieStore = await cookies();
   const chatModelFromCookie = cookieStore.get("chat-model");
-  const visibleModels = await getVisibleModels();
+  const visibleModels = await getVisibleModels(orgId ?? "");
 
   // Fall back to the first visible model if the cookie-stored model
   // is no longer enabled by the admin.

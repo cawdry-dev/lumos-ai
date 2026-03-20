@@ -11,7 +11,8 @@ export default async function AdminLayout({
   params: Promise<{ slug: string }>;
 }) {
   await connection();
-  const [session, { slug }] = await Promise.all([auth(), params]);
+  const { slug } = await params;
+  const session = await auth(slug);
 
   if (!session || session.user.role !== "admin") {
     redirect(orgPath(slug, "/"));

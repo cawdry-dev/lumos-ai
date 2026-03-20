@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { auth } from "@/lib/supabase/auth";
 import { getCopilotById, getAllUsers } from "@/lib/db/queries";
 import { CopilotForm } from "@/components/admin/copilot-form";
 import { CopilotAccess } from "@/components/admin/copilot-access";
@@ -21,9 +22,11 @@ export default async function EditCopilotPage({
   params: Promise<{ slug: string; id: string }>;
 }) {
   const { slug, id } = await params;
+  const session = (await auth(slug))!;
+  const orgId = session.org!.id;
   const [copilotRow, users] = await Promise.all([
-    getCopilotById(id),
-    getAllUsers(),
+    getCopilotById(id, orgId),
+    getAllUsers(orgId),
   ]);
 
   if (!copilotRow) {

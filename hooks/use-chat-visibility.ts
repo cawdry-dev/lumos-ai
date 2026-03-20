@@ -3,13 +3,13 @@
 import { useMemo } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
-import { updateChatVisibility } from "@/app/(chat)/actions";
+import { updateChatVisibility } from "@/app/org/[slug]/(chat)/actions";
 import {
   type ChatHistory,
   createChatHistoryPaginationKey,
   getChatHistoryPaginationKey,
 } from "@/components/sidebar-history";
-import { useOrgPath } from "@/lib/org-url";
+import { useOrgPath, useOrgSlug } from "@/lib/org-url";
 import type { VisibilityType } from "@/components/visibility-selector";
 
 export function useChatVisibility({
@@ -20,6 +20,7 @@ export function useChatVisibility({
   initialVisibilityType: VisibilityType;
 }) {
   const { mutate, cache } = useSWRConfig();
+  const slug = useOrgSlug();
   const buildPath = useOrgPath();
   const history: ChatHistory = cache.get(buildPath("/api/history"))?.data;
 
@@ -49,6 +50,7 @@ export function useChatVisibility({
     updateChatVisibility({
       chatId,
       visibility: updatedVisibilityType,
+      slug,
     });
   };
 

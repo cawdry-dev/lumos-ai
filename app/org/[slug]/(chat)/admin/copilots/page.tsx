@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { auth } from "@/lib/supabase/auth";
 import { getCopilots } from "@/lib/db/queries";
 import { CopilotList } from "@/components/admin/copilot-list";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,9 @@ export default async function CopilotListPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const copilots = await getCopilots();
+  const session = (await auth(slug))!;
+  const orgId = session.org!.id;
+  const copilots = await getCopilots(orgId);
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-8">

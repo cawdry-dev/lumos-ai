@@ -33,7 +33,7 @@ export interface EmbeddingResult {
  */
 export async function generateEmbeddings(
   texts: string[],
-  options?: { userId?: string; copilotId?: string | null },
+  options?: { userId?: string; copilotId?: string | null; orgId?: string },
 ): Promise<EmbeddingResult[]> {
   if (texts.length === 0) return [];
 
@@ -59,7 +59,7 @@ export async function generateEmbeddings(
   }
 
   // Record embedding token usage if a userId was provided
-  if (options?.userId && totalTokens > 0) {
+  if (options?.userId && options?.orgId && totalTokens > 0) {
     recordUsage({
       userId: options.userId,
       copilotId: options.copilotId ?? null,
@@ -67,6 +67,7 @@ export async function generateEmbeddings(
       promptTokens: totalTokens,
       completionTokens: 0,
       usageType: "embedding",
+      orgId: options.orgId,
     });
   }
 

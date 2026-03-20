@@ -22,6 +22,7 @@ export async function transcribeAudio(params: {
   audioFile: File;
   userId: string;
   chatId?: string | null;
+  orgId: string;
 }): Promise<{ text: string; durationSeconds: number }> {
   const transcription = await getOpenAI().audio.transcriptions.create({
     file: params.audioFile,
@@ -42,6 +43,7 @@ export async function transcribeAudio(params: {
     promptTokens: durationSeconds,
     completionTokens: 0,
     usageType: "whisper",
+    orgId: params.orgId,
   });
 
   return {
@@ -60,6 +62,7 @@ export async function generateSpeech(params: {
   userId: string;
   chatId?: string | null;
   voice?: string;
+  orgId: string;
 }): Promise<ReadableStream<Uint8Array>> {
   const response = await getOpenAI().audio.speech.create({
     model: "tts-1",
@@ -78,6 +81,7 @@ export async function generateSpeech(params: {
     promptTokens: characterCount,
     completionTokens: 0,
     usageType: "tts",
+    orgId: params.orgId,
   });
 
   // Convert the Response body to a ReadableStream

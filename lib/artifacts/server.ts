@@ -15,6 +15,7 @@ export type SaveDocumentProps = {
   kind: ArtifactKind;
   content: string;
   userId: string;
+  orgId: string;
 };
 
 export type CreateDocumentCallbackProps = {
@@ -76,13 +77,14 @@ export function createDocumentHandler<T extends ArtifactKind>(config: {
         });
       }
 
-      if (args.session?.user?.id) {
+      if (args.session?.user?.id && args.session?.org?.id) {
         await saveDocument({
           id: args.id,
           title: args.title,
           content: draftContent,
           kind: config.kind,
           userId: args.session.user.id,
+          orgId: args.session.org.id,
         });
       }
 
@@ -118,13 +120,14 @@ export function createDocumentHandler<T extends ArtifactKind>(config: {
         });
       }
 
-      if (args.session?.user?.id) {
+      if (args.session?.user?.id && args.session?.org?.id) {
         await saveDocument({
           id: args.document.id,
           title: args.document.title,
           content: draftContent,
           kind: config.kind,
           userId: args.session.user.id,
+          orgId: args.session.org.id,
         });
       }
 

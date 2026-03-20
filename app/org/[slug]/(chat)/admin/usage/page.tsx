@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { auth } from "@/lib/supabase/auth";
 import { UsageDashboard } from "@/components/admin/usage-dashboard";
 import { UserLimits } from "@/components/admin/user-limits";
 import { getAllUsersWithLimits } from "@/lib/db/queries";
@@ -19,7 +20,9 @@ export default async function AdminUsagePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const users = await getAllUsersWithLimits();
+  const session = (await auth(slug))!;
+  const orgId = session.org!.id;
+  const users = await getAllUsersWithLimits(orgId);
 
   const serialisedUsers = users.map((u) => ({
     id: u.id,

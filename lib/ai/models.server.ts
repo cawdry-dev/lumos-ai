@@ -14,11 +14,11 @@ import { getGatewayModels } from "./gateway";
  * Uses noStore() to prevent Next.js from caching this data, ensuring
  * admin changes to enabled models are reflected immediately.
  */
-export async function getVisibleModels(): Promise<ChatModel[]> {
+export async function getVisibleModels(orgId: string): Promise<ChatModel[]> {
   noStore();
   const [allModels, enabledRows] = await Promise.all([
     getGatewayModels(),
-    getEnabledModels(),
+    getEnabledModels(orgId),
   ]);
 
   if (enabledRows.length === 0) {
@@ -32,10 +32,10 @@ export async function getVisibleModels(): Promise<ChatModel[]> {
 /**
  * Returns visible models grouped by provider.
  */
-export async function getVisibleModelsByProvider(): Promise<
+export async function getVisibleModelsByProvider(orgId: string): Promise<
   Record<string, ChatModel[]>
 > {
-  const visible = await getVisibleModels();
+  const visible = await getVisibleModels(orgId);
 
   return visible.reduce(
     (acc, model) => {
