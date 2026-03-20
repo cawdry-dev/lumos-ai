@@ -1,0 +1,30 @@
+import { connection } from "next/server";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/supabase/auth";
+import { SettingsForm } from "@/components/settings-form";
+
+export default async function SettingsPage() {
+  await connection();
+  const session = await auth();
+
+  if (!session) {
+    redirect("/login");
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-2xl px-4 py-8">
+      <h1 className="mb-8 font-semibold text-3xl">Settings</h1>
+      <SettingsForm
+        displayName={session.user.displayName ?? ""}
+        accentColour={session.user.accentColour}
+        ssoProvider={session.user.ssoProvider}
+        ttsVoice={session.user.ttsVoice}
+        customInstructions={session.user.customInstructions}
+        occupation={session.user.occupation}
+        aboutYou={session.user.aboutYou}
+        memoryEnabled={session.user.memoryEnabled}
+      />
+    </div>
+  );
+}
+
