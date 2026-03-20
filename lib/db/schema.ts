@@ -49,6 +49,10 @@ export const organisation = pgTable(
     slug: varchar("slug", { length: 50 }).notNull(),
     /** Billing model — 'per_token' or 'per_seat'. */
     billingModel: varchar("billingModel", { length: 20 }).notNull().default("per_token"),
+    /** Per-org daily cost limit in cents (pence). Null means unlimited. */
+    dailyCostLimitCents: integer("dailyCostLimitCents"),
+    /** Per-org monthly cost limit in cents (pence). Null means unlimited. */
+    monthlyCostLimitCents: integer("monthlyCostLimitCents"),
     createdAt: timestamp("createdAt").notNull(),
     updatedAt: timestamp("updatedAt").notNull(),
   },

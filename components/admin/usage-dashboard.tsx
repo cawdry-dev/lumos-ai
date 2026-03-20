@@ -17,6 +17,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { OrgBillingSummary } from "@/components/admin/org-billing-summary";
 import { toast } from "@/components/toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -99,6 +100,12 @@ type UsageSummary = {
     isActive: boolean;
     updatedAt: string;
   }>;
+  billingModel?: string;
+  memberCount?: number;
+  orgLimits?: {
+    dailyCostLimitCents: number | null;
+    monthlyCostLimitCents: number | null;
+  } | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -430,6 +437,20 @@ export function UsageDashboard() {
           Export CSV
         </Button>
       </div>
+
+      {/* Organisation billing summary */}
+      {data?.billingModel && (
+        <OrgBillingSummary
+          billingModel={data.billingModel}
+          memberCount={data.memberCount ?? 0}
+          periodTotals={{
+            totalTokens: totalTokens,
+            totalCostCents: totalCost,
+          }}
+          orgLimits={data.orgLimits ?? null}
+          dailySeries={data.dailySeries ?? []}
+        />
+      )}
 
       {/* Summary cards — row 1 */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

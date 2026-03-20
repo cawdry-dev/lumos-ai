@@ -1,6 +1,8 @@
 import { auth } from "@/lib/supabase/auth";
 import {
   getActiveModelPricing,
+  getOrgCostLimits,
+  getUserCount,
   getUsageByCopilot,
   getUsageByModel,
   getUsageByType,
@@ -69,6 +71,8 @@ export async function GET(
       byUsageType,
       dailySeries,
       activePricingRules,
+      orgLimits,
+      memberCount,
     ] = await Promise.all([
       getUsagePeriodTotals({ from, to, orgId }),
       getUsageByUser({ from, to, orgId }),
@@ -77,6 +81,8 @@ export async function GET(
       getUsageByType({ from, to, orgId }),
       getUsageDailySeries({ from, to, orgId }),
       getActiveModelPricing(orgId),
+      getOrgCostLimits(orgId),
+      getUserCount(orgId),
     ]);
 
     return Response.json({
@@ -87,6 +93,14 @@ export async function GET(
       byUsageType,
       dailySeries,
       activePricingRules,
+      billingModel: session.org.billingModel,
+      memberCount,
+      orgLimits: orgLimits
+        ? {
+            dailyCostLimitCents: orgLimits.dailyCostLimitCents,
+            monthlyCostLimitCents: orgLimits.monthlyCostLimitCents,
+          }
+        : null,
       from: from.toISOString(),
       to: to.toISOString(),
     });

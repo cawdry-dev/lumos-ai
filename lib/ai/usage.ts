@@ -4,6 +4,8 @@ import type { UserType } from "@/lib/supabase/auth";
 import { entitlementsByUserType } from "./entitlements";
 import {
   getActiveModelPricing,
+  getOrgCostForPeriod,
+  getOrgCostLimits,
   getUserCostForPeriod,
   getUserCostLimits,
   insertTokenUsage,
@@ -165,6 +167,27 @@ export async function checkCostLimits(
   userRole: UserType,
   orgId: string,
 ): Promise<string | null> {
+  // Check org-level limits first
+  const orgLimits = await getOrgCostLimits(orgId);
+  const now = new Date();
+
+  if (orgLimits) {
+    if (orgLimits.dailyCostLimitCents !== null) {
+      const orgDayCost = await getOrgCostForPeriod({ orgId, from: startOfDay(), to: now });
+      if (orgDayCost.totalCostCents >= orgLimits.dailyCostLimitCents) {
+        return "org_daily";
+      }
+    }
+
+    if (orgLimits.monthlyCostLimitCents !== null) {
+      const orgMonthCost = await getOrgCostForPeriod({ orgId, from: startOfMonth(), to: now });
+      if (orgMonthCost.totalCostCents >= orgLimits.monthlyCostLimitCents) {
+        return "org_monthly";
+      }
+    }
+  }
+
+  // Then check per-user limits
   const userLimits = await getUserCostLimits(userId, orgId);
   const roleDefaults = entitlementsByUserType[userRole];
 
@@ -173,8 +196,6 @@ export async function checkCostLimits(
 
   // Unlimited — no check needed
   if (dailyLimit === null && monthlyLimit === null) return null;
-
-  const now = new Date();
 
   if (dailyLimit !== null) {
     const dayCost = await getUserCostForPeriod({ userId, from: startOfDay(), to: now, orgId });

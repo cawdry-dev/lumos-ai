@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { auth } from "@/lib/supabase/auth";
 import { UsageDashboard } from "@/components/admin/usage-dashboard";
+import { OrgCostLimitsEditor } from "@/components/admin/org-cost-limits-editor";
 import { UserLimits } from "@/components/admin/user-limits";
-import { getAllUsersWithLimits } from "@/lib/db/queries";
+import { getAllUsersWithLimits, getOrgCostLimits } from "@/lib/db/queries";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,7 +24,11 @@ export default async function AdminUsagePage({
   const { slug } = await params;
   const session = (await auth(slug))!;
   const orgId = session.org!.id;
-  const users = await getAllUsersWithLimits(orgId);
+  const billingModel = session.org!.billingModel;
+  const [users, orgLimits] = await Promise.all([
+    getAllUsersWithLimits(orgId),
+    getOrgCostLimits(orgId),
+  ]);
 
   const serialisedUsers = users.map((u) => ({
     id: u.id,
@@ -43,6 +49,9 @@ export default async function AdminUsagePage({
           </Link>
         </Button>
         <h1 className="font-semibold text-3xl">Usage Dashboard</h1>
+        <Badge variant="secondary" className="text-xs">
+          {billingModel === "per_seat" ? "Per-seat billing" : "Per-token billing"}
+        </Badge>
       </div>
 
       {/* Usage overview with charts */}
@@ -55,6 +64,22 @@ export default async function AdminUsagePage({
         </CardHeader>
         <CardContent>
           <UsageDashboard />
+        </CardContent>
+      </Card>
+
+      {/* Organisation cost limits */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="text-xl">Organisation Cost Limits</CardTitle>
+          <CardDescription>
+            Set daily and monthly cost limits for the entire organisation. When reached, all members are blocked from further AI usage.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <OrgCostLimitsEditor
+            dailyCostLimitCents={orgLimits?.dailyCostLimitCents ?? null}
+            monthlyCostLimitCents={orgLimits?.monthlyCostLimitCents ?? null}
+          />
         </CardContent>
       </Card>
 
