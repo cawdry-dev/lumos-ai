@@ -162,6 +162,13 @@
       "when": 1773934463919,
       "tag": "0022_secret_invaders",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1774023889433,
+      "tag": "0023_lonely_old_lace",
+      "breakpoints": true
     }
   ]
 }
