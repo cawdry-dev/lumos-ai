@@ -172,6 +172,12 @@ export async function proxy(request: NextRequest) {
       const orgSlug = extractOrgSlug(pathname);
 
       if (!orgSlug) {
+        // API routes are global/user-scoped — never rewrite them into
+        // `/org/{slug}/api/...`. Let the route handle its own context.
+        if (pathname.startsWith("/api/")) {
+          return supabaseResponse;
+        }
+
         // No org slug in the URL — check for a saved cookie
         const cookieSlug = request.cookies.get("orgSlug")?.value;
 
@@ -183,12 +189,6 @@ export async function proxy(request: NextRequest) {
         }
 
         // No cookie either — send the user to the org picker
-        if (pathname.startsWith("/api/")) {
-          return NextResponse.json(
-            { error: "Organisation context required." },
-            { status: 400 }
-          );
-        }
         return NextResponse.redirect(new URL("/org/select", request.url));
       }
 
