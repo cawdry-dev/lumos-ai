@@ -7,6 +7,7 @@ import { useSWRConfig } from "swr";
 import { useWindowSize } from "usehooks-ts";
 import { useArtifact } from "@/hooks/use-artifact";
 import type { Document } from "@/lib/db/schema";
+import { useOrgPath } from "@/lib/org-url";
 import { getDocumentTimestampByIndex } from "@/lib/utils";
 import { LoaderIcon } from "./icons";
 import { Button } from "./ui/button";
@@ -23,6 +24,7 @@ export const VersionFooter = ({
   currentVersionIndex,
 }: VersionFooterProps) => {
   const { artifact } = useArtifact();
+  const buildPath = useOrgPath();
 
   const { width } = useWindowSize();
   const isMobile = width < 768;
@@ -56,12 +58,14 @@ export const VersionFooter = ({
             setIsMutating(true);
 
             mutate(
-              `/api/document?id=${artifact.documentId}`,
+              buildPath(`/api/document?id=${artifact.documentId}`),
               await fetch(
-                `/api/document?id=${artifact.documentId}&timestamp=${getDocumentTimestampByIndex(
-                  documents,
-                  currentVersionIndex
-                )}`,
+                buildPath(
+                  `/api/document?id=${artifact.documentId}&timestamp=${getDocumentTimestampByIndex(
+                    documents,
+                    currentVersionIndex
+                  )}`
+                ),
                 {
                   method: "DELETE",
                 }

@@ -98,7 +98,7 @@ export function PureMessageActions({
             loading: "Upvoting Response...",
             success: () => {
               mutate<Vote[]>(
-                `/api/vote?chatId=${chatId}`,
+                buildPath(`/api/vote?chatId=${chatId}`),
                 (currentVotes) => {
                   if (!currentVotes) {
                     return [];
@@ -147,7 +147,7 @@ export function PureMessageActions({
             loading: "Downvoting Response...",
             success: () => {
               mutate<Vote[]>(
-                `/api/vote?chatId=${chatId}`,
+                buildPath(`/api/vote?chatId=${chatId}`),
                 (currentVotes) => {
                   if (!currentVotes) {
                     return [];

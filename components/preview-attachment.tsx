@@ -1,4 +1,7 @@
+"use client";
+
 import type { Attachment } from "@/lib/types";
+import { useOrgPath } from "@/lib/org-url";
 import { resolveAttachmentUrl } from "@/lib/supabase/storage";
 import { FileTextIcon } from "lucide-react";
 import { Loader } from "./elements/loader";
@@ -22,7 +25,8 @@ export const PreviewAttachment = ({
   onRemove?: () => void;
 }) => {
   const { name, url: rawUrl, contentType } = attachment;
-  const url = resolveAttachmentUrl(rawUrl);
+  const buildPath = useOrgPath();
+  const url = resolveAttachmentUrl(rawUrl, buildPath);
 
   return (
     <div

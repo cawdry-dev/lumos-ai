@@ -20,6 +20,7 @@ import {
 import { useArtifactSelector } from "@/hooks/use-artifact";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
+import { useOrgPath } from "@/lib/org-url";
 import type { ChatModel } from "@/lib/ai/models";
 import type { Vote } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
@@ -54,6 +55,7 @@ export function Chat({
   copilotId?: string | null;
 }) {
   const router = useRouter();
+  const buildPath = useOrgPath();
 
   const { visibilityType } = useChatVisibility({
     chatId: id,
@@ -146,7 +148,7 @@ export function Chat({
       return shouldContinue;
     },
     transport: new DefaultChatTransport({
-      api: "/api/chat",
+      api: buildPath("/api/chat"),
       fetch: fetchWithErrorHandlers,
       prepareSendMessagesRequest(request) {
         const lastMessage = request.messages.at(-1);
@@ -218,7 +220,7 @@ export function Chat({
   }, [query, sendMessage, hasAppendedQuery, id]);
 
   const { data: votes } = useSWR<Vote[]>(
-    messages.length >= 2 ? `/api/vote?chatId=${id}` : null,
+    messages.length >= 2 ? buildPath(`/api/vote?chatId=${id}`) : null,
     fetcher
   );
 
@@ -228,7 +230,7 @@ export function Chat({
   // Co-pilot selection — only fetch when on the new-chat screen
   const isNewChat = initialMessages.length === 0;
   const { data: availableCopilots } = useSWR<CopilotOption[]>(
-    isNewChat ? "/api/copilots/available" : null,
+    isNewChat ? buildPath("/api/copilots/available") : null,
     fetcher,
   );
 

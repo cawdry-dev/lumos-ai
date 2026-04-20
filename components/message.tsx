@@ -16,6 +16,7 @@ import {
   ToolInput,
   ToolOutput,
 } from "./elements/tool";
+import { useOrgPath } from "@/lib/org-url";
 import { resolveAttachmentUrl } from "@/lib/supabase/storage";
 import { BookOpen, Database, FileTextIcon, Globe, ImageIcon, WrenchIcon } from "lucide-react";
 import { SparklesIcon } from "./icons";
@@ -47,6 +48,7 @@ const PurePreviewMessage = ({
   requiresScrollPadding: boolean;
 }) => {
   const [mode, setMode] = useState<"view" | "edit">("view");
+  const buildPath = useOrgPath();
 
   const attachmentsFromMessage = message.parts.filter(
     (part) => part.type === "file"
@@ -105,7 +107,7 @@ const PurePreviewMessage = ({
                   attachment={{
                     name: attachment.filename ?? "file",
                     contentType: attachment.mediaType,
-                    url: resolveAttachmentUrl(attachment.url),
+                    url: resolveAttachmentUrl(attachment.url, buildPath),
                   }}
                   key={attachment.url}
                 />
@@ -121,7 +123,7 @@ const PurePreviewMessage = ({
               {documentAttachments.map((attachment) => {
                 const fileName = attachment.filename ?? "file";
                 const ext = fileName.split(".").pop()?.toUpperCase() ?? "DOC";
-                const downloadUrl = resolveAttachmentUrl(attachment.url);
+                const downloadUrl = resolveAttachmentUrl(attachment.url, buildPath);
 
                 return (
                   <a
@@ -454,7 +456,7 @@ const PurePreviewMessage = ({
                                   <img
                                     alt="Generated image"
                                     className="max-w-full rounded-md"
-                                    src={`/api/files/serve?path=${encodeURIComponent(output.storagePath)}`}
+                                    src={buildPath(`/api/files/serve?path=${encodeURIComponent(output.storagePath)}`)}
                                   />
                                 );
                               }
