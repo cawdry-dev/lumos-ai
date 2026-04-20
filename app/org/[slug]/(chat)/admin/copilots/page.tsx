@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Plus, ArrowLeft } from "lucide-react";
-import { orgPath } from "@/lib/org-url";
+import { orgPath } from "@/lib/org-path";
 
 export default async function CopilotListPage({
   params,

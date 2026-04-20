@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/supabase/auth";
-import { orgPath } from "@/lib/org-url";
+import { orgPath } from "@/lib/org-path";
 
 export default async function AdminLayout({
   children,

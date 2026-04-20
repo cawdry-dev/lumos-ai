@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { BarChart3, Bot, ChevronRight, Coins, Cpu, Shield } from "lucide-react";
-import { orgPath } from "@/lib/org-url";
+import { orgPath } from "@/lib/org-path";
 
 export default async function AdminPage({
   params,

@@ -2,17 +2,9 @@
 
 import { useCallback } from "react";
 import { useParams } from "next/navigation";
+import { orgPath } from "./org-path";
 
-/**
- * Build an org-scoped path.
- *
- * @example orgPath("acme", "/chat/123") → "/org/acme/chat/123"
- */
-export function orgPath(slug: string, path: string): string {
-  // Ensure path starts with "/"
-  const normalisedPath = path.startsWith("/") ? path : `/${path}`;
-  return `/org/${encodeURIComponent(slug)}${normalisedPath}`;
-}
+export { orgPath };
 
 /**
  * React hook — reads the current org slug from the Next.js route params.
@@ -43,4 +35,3 @@ export function useOrgPath(): (path: string) => string {
     [slug],
   );
 }
-

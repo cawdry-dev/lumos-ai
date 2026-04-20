@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { UserUsageDetail } from "@/components/admin/user-usage-detail";
-import { orgPath } from "@/lib/org-url";
+import { orgPath } from "@/lib/org-path";
 
 type PageProps = { params: Promise<{ slug: string; userId: string }> };
 

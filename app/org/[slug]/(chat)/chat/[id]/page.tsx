@@ -10,7 +10,7 @@ import { DataStreamHandler } from "@/components/data-stream-handler";
 import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
 import { getVisibleModels } from "@/lib/ai/models.server";
 import { getChatById, getMessagesByChatId } from "@/lib/db/queries";
-import { orgPath } from "@/lib/org-url";
+import { orgPath } from "@/lib/org-path";
 import { convertToUIMessages } from "@/lib/utils";
 
 export default function Page(props: { params: Promise<{ slug: string; id: string }> }) {

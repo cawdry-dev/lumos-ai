@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/supabase/auth";
-import { orgPath } from "@/lib/org-url";
+import { orgPath } from "@/lib/org-path";
 import { getOrganizationMembers } from "@/lib/db/queries";
 import { OrgMemberList } from "@/components/org-member-list";
 import { OrgInviteForm } from "@/components/org-invite-form";
